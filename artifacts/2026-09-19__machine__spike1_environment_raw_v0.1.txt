@@ -1,0 +1,192 @@
+﻿Visual Spike 1 environment raw diagnostics
+Timestamp=2026-09-19T18:26:35.8809367+03:00
+ComputerName=MARIUS-DELL
+
+===== WINDOWS =====
+--- Registry Windows version ---
+
+
+ProductName        : Windows 10 Pro
+DisplayVersion     : 25H2
+CurrentBuild       : 26200
+CurrentBuildNumber : 26200
+UBR                : 9445
+EditionID          : Professional
+InstallationType   : Client
+--- OS architecture ---
+Microsoft Windows 10.0.26200 
+X64
+X64
+
+===== CPU =====
+--- Win32_Processor ---
+
+
+Name                      : Intel(R) Core(TM) 
+                            i5-10310U CPU @ 
+                            1.70GHz
+Manufacturer              : GenuineIntel
+NumberOfCores             : 4
+NumberOfLogicalProcessors : 8
+MaxClockSpeed             : 2208
+
+===== GPU_AND_PNP =====
+--- Win32_VideoController ---
+
+
+Name                        : Intel(R) UHD 
+                              Graphics
+AdapterCompatibility        : Intel Corporation
+DriverVersion               : 31.0.101.2135
+DriverDate                  : 3/6/2025 2:00:00 AM
+PNPDeviceID                 : PCI\VEN_8086&DEV_9B4
+                              1&SUBSYS_09A01028&RE
+                              V_02\3&11583659&0&10
+VideoModeDescription        : 1920 x 1080 x 
+                              4294967296 colors
+CurrentHorizontalResolution : 1920
+CurrentVerticalResolution   : 1080
+CurrentRefreshRate          : 59
+--- PnP Display devices ---
+
+Status FriendlyName          InstanceId           
+------ ------------          ----------           
+OK     Intel(R) UHD Graphics PCI\VEN_8086&DEV_9...
+--- PnP Monitor devices ---
+
+Status FriendlyName       InstanceId              
+------ ------------       ----------              
+OK     Integrated Monitor DISPLAY\BOE07BB\4&362...
+
+===== DISPLAYS =====
+--- System.Windows.Forms.Screen ---
+
+DeviceName Primary Bounds                         
+---------- ------- ------                         
+WinDisc       True {X=0,Y=0,Width=533,Height=1132}
+--- WmiMonitorID ---
+<no output>
+--- Desktop DPI registry ---
+
+
+LogPixels      : 
+Win8DpiScaling : 0
+
+
+
+
+PSChildName                                       
+-----------                                       
+BOE07BB0_12_07E2_B7^BEFDE7AA99FB994E568FE7CA70B...
+MSBDD_BOE07BB0_12_07E2_B7_8086_9B41_00000000_00...
+
+===== VISUAL_STUDIO =====
+--- vswhere exists ---
+vswhere=C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe exists=False
+
+===== MSVC =====
+No Visual Studio installation satisfying VC.Tools.x86.x64 found by vswhere.
+
+===== WINDOWS_SDK =====
+--- SDK root ---
+sdkRoot=C:\Program Files (x86)\Windows Kits\10 exists=False
+
+===== BUILD_TOOLS =====
+--- where cmake ---
+where.exe : INFO: Could not find files for the 
+given pattern(s).
+At C:\dev\Visual\scripts\capture-screen.ps1:76 
+char:25
++ Add-Cmd 'where cmake' { where.exe cmake }
++                         ~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (INFO 
+   : Could not...ven pattern(s).:String) [], Rem  
+  oteException
+    + FullyQualifiedErrorId : NativeCommandError
+--- cmake --version ---
+ERROR: The term 'cmake' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+--- where ninja ---
+where.exe : INFO: Could not find files for the 
+given pattern(s).
+At C:\dev\Visual\scripts\capture-screen.ps1:78 
+char:25
++ Add-Cmd 'where ninja' { where.exe ninja }
++                         ~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (INFO 
+   : Could not...ven pattern(s).:String) [], Rem  
+  oteException
+    + FullyQualifiedErrorId : NativeCommandError
+--- ninja --version ---
+ERROR: The term 'ninja' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+--- where git ---
+C:\Program Files\Git\cmd\git.exe
+--- git --version ---
+git version 2.53.0.windows.1
+--- PowerShell editions ---
+
+
+Name  : PSVersion
+Value : 5.1.26100.9444
+
+Name  : PSEdition
+Value : Desktop
+
+Name  : PSCompatibleVersions
+Value : {1.0, 2.0, 3.0, 4.0...}
+
+Name  : BuildVersion
+Value : 10.0.26100.9444
+
+Name  : CLRVersion
+Value : 4.0.30319.42000
+
+Name  : WSManStackVersion
+Value : 3.0
+
+Name  : PSRemotingProtocolVersion
+Value : 2.3
+
+Name  : SerializationVersion
+Value : 1.1.0.1
+
+===== PACKAGE_TOOLS =====
+--- winget ---
+C:\Users\DELL\AppData\Local\Microsoft\WindowsApps\winget.exe
+v1.29.290
+--- vcpkg ---
+where.exe : INFO: Could not find files for the 
+given pattern(s).
+At C:\dev\Visual\scripts\capture-screen.ps1:86 
+char:77
++ ... nv:VCPKG_ROOT) { 'VCPKG_ROOT=' + 
+$env:VCPKG_ROOT }; where.exe vcpkg }
++                                                 
+        ~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (INFO 
+   : Could not...ven pattern(s).:String) [], Rem  
+  oteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+===== REPO =====
+--- Visual repo path ---
+repo=C:\dev\Visual
+
+Name                      Mode  
+----                      ----  
+app                       d-----
+artifacts                 d-----
+bridge                    d-----
+datasets                  d-----
+docs                      d-----
+external                  d-----
+infra                     d-----
+lab                       d-----
+research                  d-----
+scripts                   d-----
+specs                     d-----
+tools                     d-----
+.env                      -a----
+.gitignore                -a----
+AGENTS.md                 -a----
+doxa-migration-status.txt -a----
+README.md                 -a----

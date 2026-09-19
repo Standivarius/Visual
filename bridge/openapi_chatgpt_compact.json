@@ -1,0 +1,2578 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Visual Workspace, Linear, Agent & Computer Use API",
+    "description": "Unified local bridge API for Visual Assistant Custom GPT. Compact 30-operation surface with direct repository inspection/editing, read-only Linear lookup, bounded local-agent delegation, approved process controls, and native desktop computer-use. All GPT-facing operations are marked non-consequential for Custom GPT confirmation purposes; server-side validation and authorization remain enforced for writes, process starts/termination, uploads, and writable agent delegation. For UI actions, always follow: observe -> one bounded UI action -> observe again.",
+    "version": "1.9.0"
+  },
+  "servers": [
+    {
+      "url": "https://theralite-rosamond-pseudoexperimental.ngrok-free.dev",
+      "description": "Public tunnel endpoint"
+    }
+  ],
+  "paths": {
+    "/computer/session/start": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Start or attach to an interactive computer-use session for the Visual desktop app",
+        "operationId": "startComputerUseSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartComputerUseSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/observe": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Capture screenshot and structured UI element tree of the active Visual application window",
+        "operationId": "computerObserve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerObserveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerObserveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/click": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Click on a UI control by element reference (@ref) or (x, y) coordinates",
+        "operationId": "computerClick",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerClickRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/type": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Type text into a focused or targeted control",
+        "operationId": "computerType",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerTypeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/key": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Send a keyboard key or shortcut (e.g. 'Enter', 'Tab', 'Escape')",
+        "operationId": "computerKey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/scroll": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Scroll the application viewport ('up', 'down', 'left', 'right')",
+        "operationId": "computerScroll",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerScrollRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/select": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Select an option from a dropdown or radio choice group",
+        "operationId": "computerSelect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerSelectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/upload_file": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Upload an approved repository test fixture into the application",
+        "operationId": "computerUploadFile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerUploadFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/wait": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Wait for a specified duration or until a UI condition/text appears",
+        "operationId": "computerWait",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerWaitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/computer/session/end": {
+      "post": {
+        "tags": [
+          "Computer Use"
+        ],
+        "summary": "Terminate and release the active computer-use session",
+        "operationId": "endComputerUseSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndComputerUseSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/agent/capabilities": {
+      "post": {
+        "summary": "Discover available local and external models, provider mechanisms, and execution capabilities",
+        "operationId": "getLocalAgentCapabilities",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/search_content": {
+      "post": {
+        "summary": "Search text file contents inside workspace via ripgrep",
+        "operationId": "searchContent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchContentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/file_info": {
+      "post": {
+        "summary": "Get metadata, size, timestamps, and line count for a workspace path",
+        "operationId": "getFileInfo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetFileInfoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/list_directory": {
+      "post": {
+        "summary": "List files and folders in directory",
+        "operationId": "listDirectory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListDirectoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/read_file": {
+      "post": {
+        "summary": "Read content of a file",
+        "operationId": "readFile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/write_file": {
+      "post": {
+        "summary": "Write or update a file",
+        "operationId": "writeFile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/search_files": {
+      "post": {
+        "summary": "Search for files matching glob pattern",
+        "operationId": "searchFiles",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchFilesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/linear/list_issues": {
+      "post": {
+        "summary": "List and filter Linear issues",
+        "operationId": "listLinearIssues",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListLinearIssuesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/linear/get_issue": {
+      "post": {
+        "summary": "Get full details and relations of a Linear issue",
+        "operationId": "getLinearIssue",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetLinearIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/agent/start_read_only_task": {
+      "post": {
+        "summary": "Start an asynchronous read-only task on the local Codex agent without file modification authority",
+        "operationId": "startReadOnlyLocalAgentTask",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartReadOnlyLocalAgentTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/agent/start_task": {
+      "post": {
+        "summary": "Start an asynchronous task on the local Codex agent (read-only default or build-authorized)",
+        "operationId": "startLocalAgentTask",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartLocalAgentTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/agent/get_task": {
+      "post": {
+        "summary": "Get status and bounded summary of a delegated agent task",
+        "operationId": "getLocalAgentTask",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetLocalAgentTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/agent/get_task_changes": {
+      "post": {
+        "summary": "Get paginated pre-existing or task-delta file change lists for a task",
+        "operationId": "getLocalAgentTaskChanges",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetLocalAgentTaskChangesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/agent/get_task_log": {
+      "post": {
+        "summary": "Retrieve chunked stdout/stderr log stream for a local agent task",
+        "operationId": "getLocalAgentTaskLog",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetLocalAgentTaskLogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/agent/cancel_task": {
+      "post": {
+        "summary": "Cancel a running agent task",
+        "operationId": "cancelLocalAgentTask",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelLocalAgentTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/process/start": {
+      "post": {
+        "summary": "Start an approved repository operation asynchronously in the background",
+        "operationId": "startApprovedProcess",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartApprovedProcessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/process/get": {
+      "post": {
+        "summary": "Get status, exit code, and logs for an asynchronous approved command run",
+        "operationId": "getApprovedProcess",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetApprovedProcessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/process/terminate": {
+      "post": {
+        "summary": "Terminate a running asynchronous approved process",
+        "operationId": "terminateApprovedProcess",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminateApprovedProcessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/command/run_read_only": {
+      "post": {
+        "summary": "Execute an explicitly allowlisted read-only approved command without confirmation",
+        "operationId": "runReadOnlyApprovedCommand",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunReadOnlyApprovedCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    },
+    "/command/run": {
+      "post": {
+        "summary": "Execute a safe, validated command from the server-side approved registry",
+        "operationId": "runApprovedCommand",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunApprovedCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-openai-isConsequential": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ReadFileRequest": {
+        "properties": {
+          "relative_path": {
+            "type": "string",
+            "title": "Relative Path",
+            "description": "Relative file path inside workspace root."
+          },
+          "max_chars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Chars",
+            "description": "Optional maximum characters to read."
+          }
+        },
+        "type": "object",
+        "required": [
+          "relative_path"
+        ],
+        "title": "ReadFileRequest"
+      },
+      "StartSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active computer-use session identifier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Session status: 'active', 'attached', 'error'"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "description": "Target application"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "description": "Execution mode ('desktop' or 'browser')"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "Automation backend description"
+          },
+          "window_identity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Identity",
+            "description": "Window title and HWND identity"
+          },
+          "process_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Id",
+            "description": "Target process ID"
+          },
+          "viewport": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ViewportInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Window / viewport dimensions"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Current application URL"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Session creation timestamp (UTC ISO)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status",
+          "target",
+          "mode",
+          "backend",
+          "created_at"
+        ],
+        "title": "StartSessionResponse"
+      },
+      "GetApprovedProcessRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "UUID of the asynchronous approved command run."
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "Character offset for log stream retrieval (default 0).",
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "Maximum characters to read per stream (default 32768).",
+            "default": 32768
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "GetApprovedProcessRequest"
+      },
+      "ComputerSelectRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "element_ref": {
+            "type": "string",
+            "title": "Element Ref",
+            "description": "Element reference of select, radio group, or option"
+          },
+          "option": {
+            "type": "string",
+            "title": "Option",
+            "description": "Option value, text, or label to select"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "element_ref",
+          "option"
+        ],
+        "title": "ComputerSelectRequest"
+      },
+      "ComputerTypeRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Text to type into focused or referenced control"
+          },
+          "element_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element Ref",
+            "description": "Optional element reference to focus and type into"
+          },
+          "clear_first": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clear First",
+            "description": "Whether to clear existing text before typing",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "text"
+        ],
+        "title": "ComputerTypeRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ComputerWaitRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition",
+            "description": "Wait condition: 'time' (duration), 'text' (wait for text to appear), 'selector' (wait for CSS selector)",
+            "default": "time"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Value for text or selector condition"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds",
+            "description": "Wait timeout or duration in seconds (max 30s)",
+            "default": 3
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "ComputerWaitRequest"
+      },
+      "ViewportInfo": {
+        "properties": {
+          "width": {
+            "type": "integer",
+            "title": "Width",
+            "description": "Width in pixels"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height",
+            "description": "Height in pixels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "width",
+          "height"
+        ],
+        "title": "ViewportInfo"
+      },
+      "CancelLocalAgentTaskRequest": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "UUID of the background agent task to cancel."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "CancelLocalAgentTaskRequest"
+      },
+      "SearchFilesRequest": {
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "title": "Pattern",
+            "description": "Glob pattern (e.g. '*.py', '**/*.json').",
+            "default": "*"
+          },
+          "relative_path": {
+            "type": "string",
+            "title": "Relative Path",
+            "description": "Relative folder to search in.",
+            "default": "."
+          }
+        },
+        "type": "object",
+        "title": "SearchFilesRequest"
+      },
+      "ComputerScrollRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction",
+            "description": "Scroll direction: 'up', 'down', 'left', 'right'"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "Scroll amount in pixels (default 300)",
+            "default": 300
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "direction"
+        ],
+        "title": "ComputerScrollRequest"
+      },
+      "GetFileInfoRequest": {
+        "properties": {
+          "relative_path": {
+            "type": "string",
+            "title": "Relative Path",
+            "description": "Workspace-relative file or directory path."
+          }
+        },
+        "type": "object",
+        "required": [
+          "relative_path"
+        ],
+        "title": "GetFileInfoRequest"
+      },
+      "ListLinearIssuesRequest": {
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "Max number of issues to return (default 20).",
+            "default": 20
+          },
+          "order_by": {
+            "type": "string",
+            "title": "Order By",
+            "description": "Order issues by 'updatedAt' or 'createdAt'.",
+            "default": "updatedAt"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query",
+            "description": "Substring or exact title search for duplicate detection."
+          },
+          "team_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Key",
+            "description": "Filter by Linear team key (e.g. 'JOM')."
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id",
+            "description": "Filter by Linear team UUID."
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id",
+            "description": "Filter by Linear project UUID."
+          },
+          "status_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Name",
+            "description": "Filter by workflow status name (e.g. 'In Progress', 'Done')."
+          },
+          "status_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Id",
+            "description": "Filter by workflow status UUID."
+          }
+        },
+        "type": "object",
+        "title": "ListLinearIssuesRequest"
+      },
+      "StartReadOnlyLocalAgentTaskRequest": {
+        "properties": {
+          "task": {
+            "type": "string",
+            "title": "Task",
+            "description": "Natural-language read-only task prompt for the local agent."
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "Local agent provider: 'codex' (default) or 'antigravity' (Gemini).",
+            "default": "codex"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Model to use (default: 'gpt-5.6-luna', or 'gemini-3.8-flash').",
+            "default": "gpt-5.6-luna"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "title": "Timeout Seconds",
+            "description": "Maximum execution time in seconds (default 7200 [120 min], up to 14400 [240 min]).",
+            "default": 7200
+          },
+          "authorization_mode": {
+            "type": "string",
+            "title": "Authorization Mode",
+            "description": "Must remain 'read_only'; writable/build authorization is rejected by this endpoint.",
+            "default": "read_only"
+          },
+          "authorization_scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuildAuthorizationScope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Must be omitted; scoped write/build authorization is rejected by this endpoint."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "title": "StartReadOnlyLocalAgentTaskRequest"
+      },
+      "SearchContentRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "description": "Exact string or pattern to search for inside text file contents."
+          },
+          "relative_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Path",
+            "description": "Workspace-relative directory or file path to search inside (default: entire workspace).",
+            "default": ""
+          },
+          "file_glob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Glob",
+            "description": "Optional glob filter for filenames (e.g. '*.py', '*.ts', '*.json')."
+          },
+          "case_sensitive": {
+            "type": "boolean",
+            "title": "Case Sensitive",
+            "description": "Whether content matching is case-sensitive (default: False).",
+            "default": false
+          },
+          "max_results": {
+            "type": "integer",
+            "title": "Max Results",
+            "description": "Maximum matching lines to return (default 50, max 200).",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "SearchContentRequest"
+      },
+      "TerminateApprovedProcessRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "UUID of the asynchronous approved command run to terminate."
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "TerminateApprovedProcessRequest"
+      },
+      "EndComputerUseSessionRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier to terminate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "EndComputerUseSessionRequest"
+      },
+      "ComputerObserveResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Observation timestamp (UTC ISO)"
+          },
+          "window_title": {
+            "type": "string",
+            "title": "Window Title",
+            "description": "Application / window title"
+          },
+          "active_window": {
+            "type": "string",
+            "title": "Active Window",
+            "description": "Identity of active target window"
+          },
+          "viewport": {
+            "$ref": "#/components/schemas/ViewportInfo",
+            "description": "Dimensions of window / viewport"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Current application URL"
+          },
+          "screenshot_url": {
+            "type": "string",
+            "title": "Screenshot Url",
+            "description": "HTTP URL to fetch screenshot PNG"
+          },
+          "screenshot_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screenshot Base64",
+            "description": "Data URI formatted base64 thumbnail/image"
+          },
+          "screenshot_artifact": {
+            "type": "string",
+            "title": "Screenshot Artifact",
+            "description": "Local repository path to saved screenshot artifact"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/UIElementInfo"
+            },
+            "type": "array",
+            "title": "Elements",
+            "description": "Structured interactive element tree with @ref identifiers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "timestamp",
+          "window_title",
+          "active_window",
+          "viewport",
+          "url",
+          "screenshot_url",
+          "screenshot_artifact"
+        ],
+        "title": "ComputerObserveResponse"
+      },
+      "StartApprovedProcessRequest": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Name of the approved operation to execute asynchronously (e.g. 'ui_g_build', 'ui_g_typecheck', 'pytest', 'python_compileall', 'git_fetch')."
+          },
+          "args": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Args",
+            "description": "Structured arguments for the operation."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "title": "Timeout Seconds",
+            "description": "Maximum execution timeout in seconds (default 7200, max 14400).",
+            "default": 7200
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation"
+        ],
+        "title": "StartApprovedProcessRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WriteFileRequest": {
+        "properties": {
+          "relative_path": {
+            "type": "string",
+            "title": "Relative Path",
+            "description": "Relative file path inside workspace root."
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Text content to write to the file."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "title": "Overwrite",
+            "description": "Whether to overwrite existing files.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "relative_path",
+          "content"
+        ],
+        "title": "WriteFileRequest"
+      },
+      "RunApprovedCommandRequest": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Name of the fast synchronous approved operation to execute (e.g. 'git_status', 'git_diff', 'git_diff_stat', 'git_log', 'assert_visual_root', 'repo_curator_check'). For long-running operations, use startApprovedProcess."
+          },
+          "args": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Args",
+            "description": "Structured arguments for the operation."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "title": "Timeout Seconds",
+            "description": "Execution timeout in seconds for fast synchronous operations (default 30, max 60).",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation"
+        ],
+        "title": "RunApprovedCommandRequest"
+      },
+      "RunReadOnlyApprovedCommandRequest": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Name of an explicitly allowlisted read-only operation: git_status, git_diff, git_diff_stat, git_log, assert_visual_root, repo_curator_check."
+          },
+          "args": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Args",
+            "description": "Structured arguments for the read-only operation."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "title": "Timeout Seconds",
+            "description": "Execution timeout in seconds for fast synchronous operations (default 30, max 60).",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation"
+        ],
+        "title": "RunReadOnlyApprovedCommandRequest"
+      },
+      "ComputerKeyRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "Keyboard key or shortcut (e.g. 'Enter', 'Tab', 'Escape', 'Backspace', 'Control+a')"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "key"
+        ],
+        "title": "ComputerKeyRequest"
+      },
+      "ComputerUploadFileRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path",
+            "description": "Workspace-relative path to approved file to upload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "file_path"
+        ],
+        "title": "ComputerUploadFileRequest"
+      },
+      "StartLocalAgentTaskRequest": {
+        "properties": {
+          "task": {
+            "type": "string",
+            "title": "Task",
+            "description": "Natural-language task prompt for the local agent."
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "Local agent provider: 'codex' (default, OpenAI models) or 'antigravity' (Google Gemini).",
+            "default": "codex"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Model to use (default: 'gpt-5.6-luna', or 'gemini-3.8-flash', 'gemini-3.8-pro').",
+            "default": "gpt-5.6-luna"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "title": "Timeout Seconds",
+            "description": "Maximum execution time in seconds (default 7200, up to 14400).",
+            "default": 7200
+          },
+          "authorization_mode": {
+            "type": "string",
+            "title": "Authorization Mode",
+            "description": "'read_only' (default), 'workspace_write', or 'build_authorized'.",
+            "default": "read_only"
+          },
+          "authorization_scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuildAuthorizationScope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional bounded authorization scope."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "title": "StartLocalAgentTaskRequest"
+      },
+      "GetLocalAgentTaskRequest": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "UUID of the background agent task."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "GetLocalAgentTaskRequest"
+      },
+      "GetLocalAgentTaskChangesRequest": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "UUID of the background agent task."
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "'task_delta' (default) or 'preexisting'.",
+            "default": "task_delta"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "Character/item offset to start reading from (default 0).",
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "Maximum items to return (default 100, max 500).",
+            "default": 100
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "GetLocalAgentTaskChangesRequest"
+      },
+      "ComputerObserveRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "include_elements": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Elements",
+            "description": "Whether to include structured UI element tree",
+            "default": true
+          },
+          "include_base64": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Base64",
+            "description": "Whether to include base64 image data URI",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "ComputerObserveRequest"
+      },
+      "GetLinearIssueRequest": {
+        "properties": {
+          "issue_identifier": {
+            "type": "string",
+            "title": "Issue Identifier",
+            "description": "Linear issue identifier (e.g. 'JOM-194') or UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "issue_identifier"
+        ],
+        "title": "GetLinearIssueRequest"
+      },
+      "GetLocalAgentTaskLogRequest": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "UUID of the background agent task."
+          },
+          "stream": {
+            "type": "string",
+            "title": "Stream",
+            "description": "Stream to retrieve: 'stdout' or 'stderr'.",
+            "default": "stdout"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "Character offset to start reading from (default 0).",
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "Maximum characters to read per call (max 32768).",
+            "default": 32768
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "GetLocalAgentTaskLogRequest"
+      },
+      "ComputerActionResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Result status: 'completed' or 'failed'"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Session identifier"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Action executed (e.g. 'click', 'type', 'key', 'scroll', 'select', 'upload_file', 'wait')"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail",
+            "description": "Descriptive outcome or error details"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Execution timestamp (UTC ISO)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "session_id",
+          "action",
+          "timestamp"
+        ],
+        "title": "ComputerActionResult"
+      },
+      "ListDirectoryRequest": {
+        "properties": {
+          "relative_path": {
+            "type": "string",
+            "title": "Relative Path",
+            "description": "Relative folder path inside workspace root.",
+            "default": "."
+          }
+        },
+        "type": "object",
+        "title": "ListDirectoryRequest"
+      },
+      "ComputerClickRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Active session identifier"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X",
+            "description": "X coordinate in window pixels"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y",
+            "description": "Y coordinate in window pixels"
+          },
+          "element_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element Ref",
+            "description": "Element reference from observe (e.g. '@e1')"
+          },
+          "button": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Button",
+            "description": "Mouse button: 'left', 'right', 'middle'",
+            "default": "left"
+          },
+          "click_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Click Count",
+            "description": "1 for single click, 2 for double click",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "ComputerClickRequest"
+      },
+      "StartComputerUseSessionRequest": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "description": "Target application to control. Must be 'visual_desktop' or 'desktop' for scoped access.",
+            "default": "visual_desktop"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "description": "Execution mode: 'desktop' (native desktop app window) or 'browser' (web view).",
+            "default": "desktop"
+          },
+          "run_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Root",
+            "description": "Optional path to test run root."
+          },
+          "authorization_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorization Scope",
+            "description": "Optional authorization token or scope parameter."
+          }
+        },
+        "type": "object",
+        "title": "StartComputerUseSessionRequest"
+      },
+      "UIElementInfo": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref",
+            "description": "Stable element reference identifier (e.g. '@e1', '@e2')"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Element semantic role (e.g. 'button', 'input', 'link', 'heading', 'tab')"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Accessible name or label",
+            "default": ""
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Visible inner text",
+            "default": ""
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Input/textarea value if applicable"
+          },
+          "checked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked",
+            "description": "Checked state for radios/checkboxes"
+          },
+          "disabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled",
+            "description": "Whether element is disabled",
+            "default": false
+          },
+          "rect": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rect",
+            "description": "Bounding rect (x, y, width, height)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ref",
+          "role"
+        ],
+        "title": "UIElementInfo"
+      },
+      "BuildAuthorizationScope": {
+        "properties": {
+          "objective": {
+            "type": "string",
+            "title": "Objective",
+            "description": "Explicit goal and scope of the build task."
+          },
+          "allowed_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Paths",
+            "description": "List of repository-relative paths the task is explicitly authorized to modify."
+          },
+          "tests_allowed": {
+            "type": "boolean",
+            "title": "Tests Allowed",
+            "description": "Whether running in-scope verification tests is authorized.",
+            "default": true
+          },
+          "builds_allowed": {
+            "type": "boolean",
+            "title": "Builds Allowed",
+            "description": "Whether running in-scope build commands is authorized.",
+            "default": true
+          },
+          "git_mutation_allowed": {
+            "type": "boolean",
+            "title": "Git Mutation Allowed",
+            "description": "Whether git staging or commits are authorized.",
+            "default": false
+          },
+          "linear_mutation_allowed": {
+            "type": "boolean",
+            "title": "Linear Mutation Allowed",
+            "description": "Whether linear issue mutations are authorized.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "objective",
+          "allowed_paths"
+        ],
+        "title": "BuildAuthorizationScope"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "token",
+        "description": "Inbound bridge Bearer token"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}

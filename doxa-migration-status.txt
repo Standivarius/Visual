@@ -1,0 +1,4 @@
+obsolete=true
+canonical_project=Visual
+canonical_workspace=C:\dev\Visual
+note=This file is a stale artifact from an abandoned repository-rename attempt. Do not use it for workspace routing.

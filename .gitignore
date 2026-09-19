@@ -1,0 +1,39 @@
+# Environment and secret files
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.token
+
+# Logs
+*.log
+logs/
+bridge/*.log
+
+# Tools and runtime binaries
+tools/
+*.exe
+
+# Bridge temporary files
+bridge/tmp/
+smoke_test_*
+temp_test_*
+
+# OS artifacts
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Lab captures and recordings
+lab/captures/
+lab/recordings/
+
+# Runtime screenshots and local installation diagnostics
+artifacts/captures/
+artifacts/toolchain-install/
+artifacts/antigravity_probe.txt
+artifacts/antigravity_cli_probe.txt
+artifacts/antigravity_cli_install.txt
+artifacts/antigravity_cli_location.txt
+artifacts/antigravity_cli_models_auth.txt
