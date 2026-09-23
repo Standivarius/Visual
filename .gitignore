@@ -25,9 +25,22 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
+# Application build and packaging output
+app/build/
+app/build_verify/
+app/packaging/stage/
+app/packaging/out/
+app/packaging/support-output/
+
 # Lab captures and recordings
 lab/captures/
 lab/recordings/
+
+# Generated prototype build trees
+lab/prototypes/**/build/
+
+# Raw benchmark run bundles are local evidence. Promote selected summaries separately.
+lab/benchmarks/**/runs/
 
 # Runtime screenshots and local installation diagnostics
 artifacts/captures/
@@ -37,3 +50,13 @@ artifacts/antigravity_cli_probe.txt
 artifacts/antigravity_cli_install.txt
 artifacts/antigravity_cli_location.txt
 artifacts/antigravity_cli_models_auth.txt
+artifacts/spike1_*probe.txt
+artifacts/spike1_*stdout.txt
+artifacts/spike1_*stderr.txt
+artifacts/spike1_*launcher.txt
+artifacts/spike1_*build*.log
+artifacts/spike1_*patch*.log
+artifacts/spike1_analyze*.log
+artifacts/ffmpeg_*.txt
+artifacts/*_launcher.json
+artifacts/*_analysis.log

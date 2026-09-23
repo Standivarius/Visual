@@ -1,0 +1,10 @@
+#pragma once
+
+namespace visual::version {
+inline constexpr char kSemanticVersion[] = "@VISUAL_VERSION_SEMVER@";
+inline constexpr char kPackageId[] = "@VISUAL_PACKAGE_ID@";
+inline constexpr char kReleaseChannel[] = "@VISUAL_RELEASE_CHANNEL@";
+inline constexpr int kMajor = @VISUAL_VERSION_MAJOR@;
+inline constexpr int kMinor = @VISUAL_VERSION_MINOR@;
+inline constexpr int kPatch = @VISUAL_VERSION_PATCH@;
+}

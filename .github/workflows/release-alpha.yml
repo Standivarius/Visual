@@ -1,0 +1,86 @@
+name: Release Visual Alpha
+
+on:
+  push:
+    tags:
+      - "v*-alpha.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      RELEASE_DIR: ${{ github.workspace }}\app\packaging\out
+      REPO_URL: https://github.com/Standivarius/Visual
+      RELEASE_TAG: ${{ github.ref_name }}
+      TARGET_COMMIT: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve and validate version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = $env:RELEASE_TAG
+          if (-not $tag.StartsWith('v')) { throw "Expected v-prefixed tag, got: $tag" }
+          $version = $tag.Substring(1)
+
+          if ($version -notmatch '^\d+\.\d+\.\d+-alpha\.\d+(?:\+[0-9A-Za-z.-]+)?$') {
+            throw "Visual alpha version must match MAJOR.MINOR.PATCH-alpha.N; got: $version"
+          }
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Visual alpha version: $version"
+
+      - name: Set up .NET SDK for pinned Velopack tool
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build and test Visual
+        shell: pwsh
+        env:
+          VISUAL_RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: .\app\build.ps1 -Configuration Release -Version $env:VISUAL_RELEASE_VERSION
+
+      - name: Restore pinned Velopack CLI
+        shell: pwsh
+        run: dotnet tool restore
+
+      - name: Download previous public alpha package metadata when available
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:RELEASE_DIR | Out-Null
+          dotnet tool run vpk download github `
+            --repoUrl $env:REPO_URL `
+            --channel alpha `
+            --pre true `
+            --outputDir $env:RELEASE_DIR
+
+      - name: Package Visual alpha
+        shell: pwsh
+        env:
+          VISUAL_RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: .\app\packaging\package.ps1 -Version $env:VISUAL_RELEASE_VERSION -Configuration Release -OutputDir $env:RELEASE_DIR -SkipBuild
+
+      - name: Publish GitHub prerelease
+        shell: pwsh
+        env:
+          VISUAL_RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          VPK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet tool run vpk upload github `
+            --repoUrl $env:REPO_URL `
+            --token $env:VPK_TOKEN `
+            --channel alpha `
+            --outputDir $env:RELEASE_DIR `
+            --publish true `
+            --pre true `
+            --releaseName "Visual $env:VISUAL_RELEASE_VERSION" `
+            --tag $env:RELEASE_TAG `
+            --targetCommitish $env:TARGET_COMMIT
