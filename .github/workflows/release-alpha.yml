@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       RELEASE_DIR: ${{ github.workspace }}\app\packaging\out
       REPO_URL: https://github.com/Standivarius/Visual
