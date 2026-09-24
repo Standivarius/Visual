@@ -12,4 +12,4 @@ It retains the alpha.2 lifecycle/runtime fixes:
 - installed `--update-check` and `--update-now` engineering commands;
 - hardened telemetry startup/capture markers.
 
-The alpha.3 release will be considered successful only after an installed public alpha.2 detects, downloads and applies it through the application-driven update path.
+The alpha.3 validation succeeded: an installed public alpha.2 detected, downloaded and applied alpha.3 through the application-driven update path, after which alpha.3 launched normally and reported no newer update.
