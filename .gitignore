@@ -25,9 +25,10 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
-# Application build and packaging output
+# Application build, third-party cache and packaging output
 app/build/
 app/build_verify/
+app/third_party/velopack/
 app/packaging/stage/
 app/packaging/out/
 app/packaging/support-output/

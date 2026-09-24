@@ -1,42 +1,35 @@
-# Visual — current two-screen alpha
+# Visual - current two-screen alpha
 
-This folder contains the integrated Visual application runtime.
+This folder contains the integrated Visual Windows application runtime used for the Doxa low-vision workstation project.
 
 ## Current purpose
 
-The current alpha is a two-screen low-vision magnifier and experimental platform:
+Visual is currently a functional two-screen engineering alpha:
 
-- primary/source display remains the work/context surface;
-- another physical display becomes the magnified Detail surface;
-- Detail can follow deliberate pointer movement, text caret or keyboard focus;
-- viewport motion uses comfort margins rather than constant recentering;
-- the selected target is highlighted on Detail;
-- Detail does not steal keyboard focus from the source application.
+- the Windows primary display is the source/work surface;
+- a second physical display becomes the magnified Detail surface;
+- Detail follows deliberate pointer movement, text caret or keyboard focus;
+- the viewport uses comfort margins rather than constant recentering;
+- the selected target is shown with a high-contrast locator;
+- Detail is non-activating so the source application keeps keyboard focus.
 
-This is not yet the four-screen Doxa product and is not intended to become a broad ZoomText/SuperNova replacement.
+It is an experimental magnification/productivity platform, not a finished general-purpose magnifier replacement.
 
 ## Build
 
-From PowerShell:
-
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\app\build.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\app\build.ps1 -Configuration Release
 ```
 
-Release executables:
+Release outputs:
 
 - `app\build\Release\visual_app.exe`
 - `app\build\Release\visual_diagnostics.exe`
+- `app\build\Release\velopack_libc.dll`
 
-The build version can be overridden, for example:
+The canonical default version is `0.1.0-alpha.2` in `app\version.cmake`. A build can override it with `-Version <semver>`.
 
-```powershell
-.\app\build.ps1 -Configuration Release -Version 0.1.0-alpha.1
-```
-
-The canonical default semantic version/package identity is in `app\version.cmake`.
-
-Current Release build runs the production CTest suite, including diagnostics JSON validation.
+The native build acquires the pinned Velopack 1.2.0 C/C++ SDK into the ignored `app\third_party\velopack\` cache, builds Visual, and runs the five CTest tests. Ordinary native builds do not require a .NET SDK.
 
 ## Runtime architecture
 
@@ -54,11 +47,9 @@ steady interaction/render loop (~60 Hz)
   -> second-screen Detail
 ```
 
-WGC frame arrival is deliberately **not** the clock for pointer/caret interaction anymore. Cursor capture is disabled, so the app independently samples POI evidence and renders the latest cached source texture on a steady cadence.
+WGC frame arrival is deliberately not the interaction clock. Cursor capture is disabled; Visual samples POI evidence independently and renders the latest cached source texture on a steady cadence.
 
-This change was made after human use exposed visible lag during fast pointer movement over otherwise static source content.
-
-## Default display behavior
+## Display behavior
 
 With two or more displays:
 
@@ -66,153 +57,123 @@ With two or more displays:
 - destination defaults to the first different active monitor;
 - Detail uses the destination monitor full-screen.
 
-Optional command-line arguments:
+Engineering command-line options include:
 
-- `--source N`;
-- `--dest N`;
-- `--zoom 1|2|4`;
-- `--log PATH`;
-- `--single-monitor` for development only.
+- `--source N`
+- `--dest N`
+- `--zoom 1|2|4`
+- `--log PATH`
+- `--single-monitor`
 
-Monitor index is currently an engineering selection mechanism, not the future Doxa identity/role model.
+Monitor index is an engineering selection mechanism, not the final Doxa display-role model.
 
 ## Global alpha hotkeys
 
-These work while another application retains focus:
+- `Ctrl+Alt+1` - 1x
+- `Ctrl+Alt+2` - 2x
+- `Ctrl+Alt+4` - 4x
+- `Ctrl+Alt+0` - temporary normal view / exact return
+- `Ctrl+Alt+T` - tracking on/off
+- `Ctrl+Alt+Q` - exit Visual
 
-- `Ctrl+Alt+1` — 1x;
-- `Ctrl+Alt+2` — 2x;
-- `Ctrl+Alt+4` — 4x;
-- `Ctrl+Alt+0` — temporary normal view / exact return to previous magnified viewport;
-- `Ctrl+Alt+T` — tracking on/off;
-- `Ctrl+Alt+Q` — exit Visual.
+## Tracking and viewport evidence
 
-## Tracking evidence
+Candidate POI sources include recent pointer movement, UIA TextPattern caret, Win32 caret, UIA keyboard focus and Win32 keyboard focus. Recent pointer movement is treated as short-lived direct intent; when it stops, semantic evidence can resume. Cached semantic evidence keeps its original timestamp.
 
-Current candidate sources:
+Current viewport defaults use 20% horizontal and vertical comfort margins, minimum required panning when a target leaves that region, jump classification for large moves and source-bound clamping. These are experimental defaults, not final low-vision product settings.
 
-1. explicit user target architecture slot;
-2. recently moving pointer;
-3. UIA TextPattern2 caret;
-4. UIA TextPattern insertion range;
-5. Win32 caret;
-6. UIA keyboard focus;
-7. Win32 keyboard focus.
+## Pointer regression status
 
-A moving pointer is treated as short-lived direct user intent. When movement stops, caret/focus evidence resumes automatically.
+The PMv2-correct physical regressions on 2026-09-24 closed the prior generic pointer-loss investigation for the current build:
 
-A transient UIA semantic-caret miss may retain the last real caret with its **original timestamp** only; normal freshness rules still expire it. Cached semantic evidence is never retimestamped to pretend that it is new.
+- two real 1920x1080 displays;
+- independent `GetCursorPos` ground truth;
+- Visual telemetry with flushed lifecycle markers;
+- full-desktop video/contact-sheet review;
+- zero Present failures;
+- zero locator-missing frames during slow horizontal, fast horizontal, fast zig-zag and edge-teleport phases;
+- no genuine rendered-locator disappearance reproduced.
 
-## Interaction-cadence evidence
-
-After the 2026-09-23 cadence refactor:
-
-- fast-pointer stress: pointer position error p95 0 px;
-- pointer evidence age p95 ~16.6 ms;
-- pointer -> semantic-caret handoff ~88.7 ms;
-- 60-second soak: ~59.94 fps;
-- soak frame-gap p95 ~16.8 ms, max ~24.8 ms;
-- zero Present failures in those runs.
-
-Human regression is still required to confirm that the previously perceived fast-pointer lag is gone perceptually.
-
-## Viewport policy
-
-Current experimental defaults:
-
-- 20% horizontal comfort margin;
-- 20% vertical comfort margin;
-- hold while the target remains inside the comfort area;
-- minimum required pan when it leaves;
-- jump classification for large moves;
-- source-bound clamping.
-
-These values are not final product defaults and need low-vision task-use tuning.
-
-## Locator
-
-The selected POI is rendered with a provider-neutral two-tone high-contrast locator:
-
-- pointer — crosshair-style mark;
-- caret/focus — outlined target region.
-
-Current black/white styling is an alpha default, not a final personalization model.
+The source-to-Detail monitor boundary is a separate, understood policy issue. When the native cursor leaves the source monitor, `Win32EvidenceProvider` stops emitting it as a source POI, arbitration falls back to semantic focus, and Detail can jump. Pointer POI resumes immediately when the cursor returns to the source. This is not a capture/render failure; it needs a deliberate UX policy decision.
 
 ## Telemetry
 
-The CSV preserves the original integrated fields and now also records:
+Runtime CSV telemetry records render state, POI source, locator visibility, viewport geometry and freshness information. Startup/capture markers are flushed immediately:
 
-- pointer movement age;
-- UIA snapshot age;
-- current UIA caret/focus availability;
-- selected POI age;
-- selected POI screen rectangle.
+- `telemetry_started`
+- `capture_started`
+- `first_source_frame`
+- `first_render_frame`
+- `capture_failure`
 
-These fields are intended to make pointer/caret handoff failures diagnosable rather than inferred from visible behavior alone.
+The first numeric telemetry frame is also flushed immediately, preventing force-terminated regression runs from producing misleading zero-byte evidence.
+
+## Velopack lifecycle
+
+Visual pins Velopack 1.2.0. `app\src\velopack_entry.cpp` owns the real `wWinMain` and executes:
+
+```cpp
+Velopack::VelopackApp::Build().Run();
+```
+
+before normal Visual DPI/WinRT/display/capture initialization. The existing implementation in `main.cpp` is compiled with its `wWinMain` symbol renamed to `VisualProductMain` and is called only after Velopack lifecycle handling returns.
+
+The SDK archive contains `velopack_libc_win_x64_msvc.dll`, but its import library encodes the runtime dependency name `velopack_libc.dll`. The build therefore copies/renames the SDK DLL to `velopack_libc.dll` beside `visual_app.exe`, and packaging ships that imported name.
+
+Local `0.1.0-alpha.2` lifecycle verification is complete:
+
+- Release build linked successfully;
+- CTest 5/5 passed;
+- normal `vpk 1.2.0` packaging succeeded with no `--skipVeloAppCheck`;
+- the full package contains `lib/app/velopack_libc.dll`;
+- clean Setup exited `0`;
+- the Velopack install hook reported `Hook executed successfully`;
+- installed ProductVersion is `0.1.0-alpha.2`;
+- installed `Update.exe` and `velopack_libc.dll` are present;
+- installed `visual_app.exe --update-check` exited `0` and reported `result=no_update` against the current public alpha feed;
+- the hardened consolidated verifier reports `LIFECYCLE_RESULT=PASS`.
+
+## Update maintenance
+
+The installed executable exposes engineering-only maintenance commands that do not enter Visual's normal capture/UI path:
+
+```powershell
+visual_app.exe --update-check
+visual_app.exe --update-now
+```
+
+`--update-check` uses Velopack's native GitHub update source for `Standivarius/Visual` with prereleases enabled. Exit `0` means no newer release; exit `10` means an update is available.
+
+`--update-now` checks, downloads and schedules an available update for application after the process exits, without an automatic restart. That download/apply path is implemented but cannot be called end-to-end proven until a later public alpha exists for an installed alpha.2 to consume.
+
+Maintenance diagnostics are appended to `%LOCALAPPDATA%\Standivarius.Visual\visual_update.log`.
+
+## Packaging and releases
+
+See `app\packaging\README.md` for the pinned packaging toolchain and release procedure. The package script uses normal Velopack application validation and does not bypass the lifecycle check.
+
+Early alpha packages are unsigned, so Windows may show unknown-publisher/SmartScreen warnings until trusted code signing is added.
 
 ## Structured diagnostics
 
-`visual_diagnostics.exe` outputs a small JSON support report containing Visual version, Windows build, active monitor geometry/mode/DPI, GPU adapter names and adjacent Visual-binary presence/size.
-
-It intentionally does not collect screenshots, document/window/browser contents, usernames, arbitrary file listings, environment-variable dumps, passwords or tokens.
-
-See `app\packaging\README.md` for support-bundle use.
-
-## Alpha packaging and releases
-
-Velopack is pinned through the repository-local .NET tool manifest and is used for the `Standivarius.Visual` `alpha` channel.
-
-Packaging/release infrastructure lives under:
-
-- `app\packaging\`
-- `.config\dotnet-tools.json`
-- `.github\workflows\release-alpha.yml`
-
-The normal native build does not require .NET/Velopack. GitHub Actions installs the SDK, restores the pinned `vpk` CLI, builds/tests Visual and publishes alpha installer/update assets to GitHub Releases.
-
-Early infrastructure releases are intentionally unsigned; Windows may show unknown-publisher/SmartScreen warnings until trusted code signing is added.
-
-The release pipeline is separate from in-app automatic update integration. Do not claim automatic updating is proven until an installed alpha successfully updates to a later alpha using the Velopack C/C++ update client.
+`visual_diagnostics.exe` reports Visual version/package/channel, Windows build, process architecture, monitor geometry/mode/DPI, GPU adapter names and adjacent Visual binary presence/size. It intentionally does not collect screenshots, application contents, usernames, environment-variable dumps, passwords or tokens.
 
 ## Browser status
 
-Browser editing-caret support is **not yet validated**.
-
-A deterministic Microsoft Edge fixture renders correctly and Visual has observed valid Edge UIA TextPattern caret evidence transiently. During the measured automated editing phases, however, caret evidence has not remained reliably available and Visual falls back to browser/window focus.
-
-Treat this as an explicit compatibility investigation. Do not claim reliable Chromium caret tracking yet.
+Reliable Chromium/Edge editing-caret tracking is not yet validated. A deterministic Edge fixture has exposed valid UIA TextPattern caret evidence transiently, but measured editing phases can still fall back to browser/window focus.
 
 ## Recovery policy
 
-- WGC content-size changes recreate the frame pool;
-- capture-item closure is detected;
-- display topology changes are detected;
-- topology invalidation causes a clean shutdown with a distinct telemetry/exit reason;
-- after the desired two-display topology returns, relaunch Visual and it rebuilds current capture/render state.
-
-This policy has been physically validated with a real HDMI disconnect/reconnect cycle.
-
-## Context / productivity experiment
-
-The first Context+Detail experiment protocol is prepared at:
-
-`lab\experiments\context_persistence\PROTOCOL.md`
-
-The first comparison uses the current application before adding more features:
-
-1. conventional one-screen magnification;
-2. Visual two-screen dynamic Detail + source/context;
-3. ordinary two-screen extended desktop.
-
-A dedicated Freeze/Reference feature should only move forward after this comparison shows what additional navigation cost actually remains.
+WGC size changes recreate the frame pool; capture-item closure and display-topology invalidation are detected; topology invalidation causes a clean shutdown; relaunch after topology restoration rebuilds capture/render state. HDMI disconnect/reconnect recovery has been physically validated.
 
 ## Known alpha limitations
 
-- human regression after the fast-pointer cadence fix is pending;
-- reliable Chromium/Edge editing-caret tracking is pending;
-- display sleep/wake has not yet been exercised separately from HDMI unplug/reconnect;
-- viewport margins and locator appearance have not yet had a low-vision usability-tuning pass;
-- installer/update infrastructure is initial and unsigned; production signing and in-app update validation remain;
-- no polished launcher/settings/onboarding UI;
-- no persistent Doxa monitor roles/workspace recall yet;
-- no four-screen Doxa validation yet.
+- reliable Chromium/Edge editing-caret tracking remains open;
+- display sleep/wake is not separately validated from HDMI disconnect/reconnect;
+- viewport margins and locator appearance need low-vision usability tuning;
+- source-to-Detail pointer-boundary UX policy needs a product decision;
+- trusted code signing is not configured;
+- no polished launcher/settings/onboarding/update UI exists;
+- update download/apply needs a later published alpha for end-to-end proof;
+- persistent Doxa monitor roles/workspace recall are not implemented;
+- broader Doxa multi-display validation remains future work.

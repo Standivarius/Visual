@@ -1,165 +1,155 @@
 # Visual alpha packaging and support
 
-Visual uses **Velopack 1.2.0** for the Windows alpha installer/update package format.
+Visual uses Velopack 1.2.0 for Windows alpha packaging, native lifecycle startup and controlled update-maintenance plumbing.
 
 ## Identity
 
 - package id: `Standivarius.Visual`
 - friendly name: `Visual Alpha`
-- release channel: `alpha`
-- default version: defined in `app/version.cmake`
-- public repository/releases: `https://github.com/Standivarius/Visual`
+- channel: `alpha`
+- canonical default version: `0.1.0-alpha.2`
+- public repository: `https://github.com/Standivarius/Visual`
 
-The build version can be overridden by CI or locally with `app/build.ps1 -Version <semver>`.
+## Pinned toolchain
 
-## Ordinary local build
+The release path intentionally pins both halves of Velopack integration:
 
-The normal native build does **not** require Velopack or the .NET SDK:
+- Velopack CLI (`vpk`): `1.2.0`, via `.config/dotnet-tools.json`;
+- Velopack C/C++ SDK: `1.2.0`;
+- Velopack SDK ZIP SHA-256: `547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835`;
+- .NET SDK for the CLI: `8.0.425`;
+- .NET SDK win-x64 ZIP SHA-512: `f0b6f15bf6f1a0507205c0cb102ab99e1dee875c4682c8ed94665be1d580186a06b21455e83b3a01a0ff7f4cd887b67420f2e2fe09ed985534a4cea488ae1af9`.
+
+`app/packaging/get-velopack-sdk.ps1` acquires/validates the native SDK into ignored `app/third_party/velopack/1.2.0/`.
+
+`app/packaging/get-dotnet-sdk.ps1` can acquire the pinned .NET SDK into ignored `tools/dotnet/8.0.425/` when the exact SDK is not already installed. Packaging selects the pinned version rather than accepting an arbitrary global SDK.
+
+## Native lifecycle integration
+
+`app/src/velopack_entry.cpp` owns the real application entry point. It executes `Velopack::VelopackApp::Build().Run()` before normal Visual initialization, handles explicit update-maintenance commands, then delegates normal launches to `VisualProductMain` in `main.cpp`.
+
+The SDK file is named `velopack_libc_win_x64_msvc.dll`, while the MSVC import library records the runtime dependency name `velopack_libc.dll`. CMake therefore copies the SDK DLL to `velopack_libc.dll`, which is the name shipped in the package.
+
+Packaging deliberately does not use `--skipVeloAppCheck`.
+
+## Build
 
 ```powershell
 .\app\build.ps1 -Configuration Release
 ```
 
-It builds and tests:
+The build acquires the pinned native SDK when necessary, builds `visual_app.exe` and `visual_diagnostics.exe`, copies `velopack_libc.dll`, and runs CTest.
 
-- `visual_app.exe`
-- `visual_diagnostics.exe`
-- the native production tests
-
-## Local Velopack package
-
-Packaging additionally requires a .NET SDK. The repository contains a local tool manifest in `.config/dotnet-tools.json`, pinned to `vpk` 1.2.0.
+## Package
 
 ```powershell
-.\app\packaging\package.ps1 -Version 0.1.0-alpha.1
+.\app\packaging\package.ps1 -Version 0.1.0-alpha.2
 ```
 
-The script builds/tests Visual, stages only the intended shipping files, restores the pinned tool and runs `vpk pack` for the `alpha` channel. Generated staging/release directories are ignored by Git.
+The script builds/tests Visual, stages only intended shipping files, restores the pinned `vpk`, and runs normal `vpk --yes pack` for the alpha channel. `--yes` keeps repeated local/CI output-directory use noninteractive; it does not bypass application validation.
 
 To package an already-built matching version:
 
 ```powershell
-.\app\packaging\package.ps1 -Version 0.1.0-alpha.1 -SkipBuild
+.\app\packaging\package.ps1 -Version 0.1.0-alpha.2 -SkipBuild
 ```
 
-Do not use `-SkipBuild` with a version that differs from the version embedded in the existing binaries.
+Do not use `-SkipBuild` for a version different from the binaries already built.
 
-## First public bootstrap
+## Verification
 
-The canonical local repository historically contained substantial uncommitted engineering/research work. The first-public-release helper therefore deliberately stages only:
-
-- `.gitignore`
-- `.config/`
-- `.github/`
-- `app/`
-- `support/`
-
-It refuses to commit unexpected staged paths.
-
-After authenticating GitHub locally, the scoped first-release operation is:
+Candidate verification:
 
 ```powershell
-.\app\packaging\bootstrap-public-alpha.ps1
+.\app\packaging\verify-alpha2-candidate.ps1 -Version 0.1.0-alpha.2
 ```
 
-It:
+It verifies:
 
-1. adds `https://github.com/Standivarius/Visual.git` as `origin` only if no origin exists;
-2. verifies the current branch is `master`;
-3. stages only the public Visual application/distribution/support surface;
-4. commits `chore: bootstrap Visual alpha distribution`;
-5. pushes `master`;
-6. creates and pushes `v0.1.0-alpha.1`;
-7. the pushed tag triggers GitHub Actions.
+- Release build and CTest;
+- ProductVersion;
+- x64 PE machine type for Visual and the native Velopack runtime;
+- normal `vpk` packaging with no lifecycle-validation bypass;
+- Setup/full-package/feed output;
+- feed contains the requested version;
+- Velopack SDK archive SHA-256.
 
-Do not run the bootstrap script from another repository or with unrelated files already staged.
-
-## GitHub alpha releases
-
-`.github/workflows/release-alpha.yml` triggers only from pushed tags matching:
-
-`v*-alpha.*`
-
-For example:
-
-`v0.1.0-alpha.1`
-
-The Windows runner:
-
-1. validates the alpha tag/version;
-2. installs a .NET 8 SDK for the pinned Velopack CLI;
-3. builds and runs CTest with that version embedded in the binaries;
-4. restores the pinned Velopack CLI;
-5. attempts to download previous public alpha release data so Velopack can produce delta assets when possible;
-6. packages the alpha installer/update assets;
-7. publishes a GitHub **pre-release** using the repository `GITHUB_TOKEN`.
-
-No local GitHub CLI or local Velopack installation is required for the CI publication path.
-
-If organization/repository policy limits `GITHUB_TOKEN` to read-only access, enable **Settings → Actions → General → Workflow permissions → Read and write permissions** for the repository before retrying the release workflow.
-
-## Signing status
-
-The first infrastructure releases are **unsigned development alphas**. Windows may display SmartScreen or unknown-publisher warnings. Do not treat those warnings as an installer failure.
-
-Before inviting non-technical external testers, add trusted Windows code signing to the release workflow.
-
-## Structured diagnostics
-
-Run:
+Lifecycle/install verification:
 
 ```powershell
-.\app\build\Release\visual_diagnostics.exe
+.\app\packaging\verify-alpha2-install.ps1 -Version 0.1.0-alpha.2
 ```
 
-or write JSON to a file:
+It verifies Setup exit status, installed version/runtime/`Update.exe`, successful lifecycle-hook log evidence, and the installed `--update-check` path. It now explicitly fails on a non-zero Velopack hook or partial-install marker even if Setup itself returns zero.
+
+### Proven local alpha.2 result - 2026-09-24
+
+On MARIUS-DELL:
+
+- Release build: success;
+- CTest: 5/5 passed;
+- `vpk 1.2.0` package: success without `--skipVeloAppCheck`;
+- full package: `Standivarius.Visual-0.1.0-alpha.2-alpha-full.nupkg`;
+- Setup: `Standivarius.Visual-alpha-Setup.exe`;
+- package payload contains `lib/app/velopack_libc.dll`;
+- clean Setup exit: `0`;
+- install hook: `Hook executed successfully`;
+- installed ProductVersion: `0.1.0-alpha.2`;
+- installed update check exit: `0`;
+- installed update result: `no_update`;
+- consolidated verifier: `LIFECYCLE_RESULT=PASS`.
+
+The earlier alpha.2 candidate failure was traced to shipping the SDK archive filename (`velopack_libc_win_x64_msvc.dll`) instead of the DLL basename encoded by the import library (`velopack_libc.dll`). That defect is corrected and covered by package/install verification.
+
+## Explicit update maintenance
+
+Installed engineering commands:
 
 ```powershell
-.\app\build\Release\visual_diagnostics.exe --out .\diagnostics.json
+visual_app.exe --update-check
+visual_app.exe --update-now
 ```
 
-The current schema reports:
+`--update-check` checks the public GitHub prerelease feed without launching the magnifier. `--update-now` checks, downloads and schedules an available update for apply after process exit, with no automatic restart.
 
-- Visual version/package/channel;
-- Windows version/build;
-- process architecture;
-- monitor geometry/mode/DPI;
-- GPU adapter names;
-- adjacent Visual-executable presence/size.
+Current claim boundaries:
 
-It intentionally does **not** report the installed path, because a per-user path can reveal the Windows account name. It also does not collect screenshots, document/window contents, usernames, arbitrary file listings, environment variables, passwords or tokens.
+1. package/feed production - proven;
+2. native Velopack lifecycle startup - proven locally for alpha.2;
+3. installed update-check transport - proven locally for alpha.2;
+4. download/apply transport - implemented, not end-to-end proven until a later public alpha is available;
+5. user-facing automatic-update UX/policy - not implemented.
 
-## Support bundle
+Published alpha.1 cannot initiate alpha.1 -> alpha.2 itself because alpha.1 contains no update client. Once alpha.2 is public, a later alpha can be used to prove `--update-now` end to end.
 
-From a development checkout:
+## GitHub alpha release workflow
 
-```powershell
-.\app\packaging\support-bundle.ps1
-```
+`.github/workflows/release-alpha.yml` runs for tags matching `v*-alpha.*`.
 
-This creates a timestamped ZIP containing `diagnostics.json` and a privacy note.
+The workflow:
 
-Runtime telemetry is opt-in for a bundle. Include it only when explicitly requested:
+1. validates the tag/version;
+2. installs exact .NET SDK `8.0.425`;
+3. builds/tests with the tag version embedded;
+4. restores pinned `vpk 1.2.0`;
+5. downloads prior alpha release metadata when available;
+6. packages with normal Velopack validation;
+7. publishes a GitHub prerelease.
 
-```powershell
-.\app\packaging\support-bundle.ps1 -TelemetryPath C:\path\to\visual_app_telemetry.csv
-```
+Do not rewrite an existing alpha tag. `v0.1.0-alpha.1` remains immutable; alpha.2 is a new tag/release.
 
-The script accepts only a CSV with the expected Visual telemetry header and imposes a 100 MB size limit before copying it verbatim into the bundle.
+## alpha.1 history
 
-This deterministic bundle is intended to become the input to Dify/LLM-assisted support. The LLM should interpret structured evidence and reviewed documentation; it should not receive unrestricted administrator or shell authority.
+Published `0.1.0-alpha.1` was packaged with `--skipVeloAppCheck true` and did not initialize the native lifecycle handler. A physical alpha.1 installation showed `Install Partially Succeeded`, although Visual could run afterward. The missing lifecycle integration is the leading explanation, but the historical alpha.1 Setup log was not recovered, so that historical root cause is not claimed as conclusively proven.
 
-## Dify prototype
+Alpha.2 local testing now shows a normal `Installation Succeeded` result and a successful lifecycle hook.
 
-Version-controlled support knowledge and the initial Dify system prompt live under:
+## Signing
 
-- `support/knowledge/`
-- `support/dify/`
+Current alpha packages are unsigned. SmartScreen/unknown-publisher warnings are expected until trusted Windows code signing is added.
 
-For the first prototype use Dify Cloud rather than operating a VPS. Create one knowledge base from `support/knowledge/`, attach it to a support Chatbot/Chatflow and use `support/dify/system-prompt.md` as the assistant instruction set.
+## Diagnostics and support
 
-No Dify or LLM API key belongs in this repository or inside `Visual.exe`.
+`visual_diagnostics.exe` produces privacy-limited structured diagnostics. `app/packaging/support-bundle.ps1` creates a support ZIP; runtime telemetry is included only when explicitly provided.
 
-## Update integration status
-
-Velopack packaging and the public release feed are established by this layer. **In-app check/download/apply is a separate integration step** using Velopack's C/C++ library and should be validated with an `alpha.1 -> alpha.2` update before we call automatic updating proven.
+Support knowledge lives under `support/knowledge/`. Dify/LLM support remains advisory and must not receive unrestricted administrator authority or embedded secrets.

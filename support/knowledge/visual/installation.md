@@ -1,46 +1,65 @@
 # Visual alpha installation and update support
 
-## Distribution model
+## Distribution
 
-The Visual alpha is packaged with Velopack under package id `Standivarius.Visual` on the `alpha` channel.
+Visual alpha uses package id `Standivarius.Visual` on the Velopack `alpha` channel.
 
-The intended tester flow is:
+Tester flow:
 
-1. open the public Visual GitHub release page;
-2. download the current `Visual-Setup.exe` asset;
-3. run the installer;
-4. launch Visual from its installed shortcut;
-5. if Windows displays an unknown-publisher or SmartScreen warning, understand that early alpha builds are unsigned until production code signing is added.
+1. download the current Setup executable from the public Visual GitHub prerelease;
+2. run Setup;
+3. launch Visual from the installed shortcut;
+4. expect possible SmartScreen/unknown-publisher warnings while alpha packages remain unsigned.
 
-## Requirements
+Current target assumptions are Windows 11, x64, and two active physical displays for the normal two-screen mode.
 
-Current alpha assumptions:
+## Lifecycle status
 
-- Windows 11 development/test target;
-- x64 Visual build;
-- two active physical displays for the normal two-screen mode;
-- Visual C++ runtime can be bootstrapped by the Velopack package.
+Published `0.1.0-alpha.1` bypassed Velopack application validation and did not initialize the native lifecycle handler. A physical alpha.1 install showed `Install Partially Succeeded` even though the application could subsequently run.
 
-## Package/version identity
+`0.1.0-alpha.2` integrates Velopack 1.2.0 at the real process entry point and packages the required native runtime as `velopack_libc.dll`.
 
-- app id: `Standivarius.Visual`
-- release channel: `alpha`
-- semantic versions use the form `MAJOR.MINOR.PATCH-alpha.N`
+Local alpha.2 verification on 2026-09-24 proved:
 
-## Update status
+- normal packaging with no `--skipVeloAppCheck`;
+- clean Setup exit `0`;
+- Setup log reports `Hook executed successfully`;
+- installed ProductVersion `0.1.0-alpha.2`;
+- installed `Update.exe` and `velopack_libc.dll` are present;
+- installed `visual_app.exe --update-check` exits `0` and reaches `result=no_update` against the current public feed;
+- consolidated lifecycle verification ends in `LIFECYCLE_RESULT=PASS`.
 
-The release pipeline can create and publish Velopack update assets. In-app automatic check/download/apply is a separate integration step and must not be described as proven until an installed alpha has successfully updated to a later alpha in a controlled test.
+The exact historical alpha.1 root cause remains formally unproven because its Setup log was not recovered. Missing lifecycle integration is the leading explanation.
 
-Until then, testers should install a newer published alpha from its installer when specifically instructed.
+## Update maintenance
 
-## Installation troubleshooting
+Engineering commands in installed alpha.2:
 
-If Setup does not start:
+- `visual_app.exe --update-check` - check public GitHub prereleases without starting the magnifier UI;
+- `visual_app.exe --update-now` - check, download and schedule an available update to apply after Visual exits; no automatic restart is requested yet.
 
-1. confirm the downloaded file is the Visual release installer, not a source archive;
-2. record the exact Windows warning/error text;
-3. do not disable Windows security globally;
-4. if the warning concerns an unknown publisher, confirm whether the build is one of the documented unsigned alpha releases;
-5. if installation still fails, create a support report if `visual_diagnostics.exe` is available, otherwise escalate with the release version and exact installer error.
+Maintenance diagnostics are appended to `%LOCALAPPDATA%\Standivarius.Visual\visual_update.log`.
 
-Do not recommend registry edits, policy bypasses, certificate installation or antivirus exclusions unless a reviewed Visual support procedure explicitly adds such a step later.
+Current proof boundary:
+
+- packaging/feed production: proven;
+- lifecycle startup: proven locally for alpha.2;
+- installed update check: proven locally for alpha.2;
+- download/apply: implemented, awaiting a later public alpha for end-to-end proof;
+- polished automatic-update UX/policy: not implemented.
+
+Alpha.1 cannot initiate its own update to alpha.2 because it has no update client. Once alpha.2 is public, a later alpha can exercise the installed `--update-now` path.
+
+## Troubleshooting installation
+
+If Setup fails or reports partial success:
+
+1. record the exact status/error text;
+2. preserve the Setup/Velopack log before retrying;
+3. confirm the downloaded file is the Visual Setup executable rather than a source archive;
+4. do not disable Windows security globally;
+5. treat documented unsigned-alpha publisher warnings separately from installer failure;
+6. record the installed ProductVersion if files were installed despite the warning;
+7. use `visual_diagnostics.exe` or the repository support-bundle procedure when available.
+
+Do not recommend registry edits, policy bypasses, certificate installation or antivirus exclusions unless a reviewed Visual support procedure explicitly requires them.

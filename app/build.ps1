@@ -13,9 +13,19 @@ if($cmakeCommand){
 }
 if(-not(Test-Path $cmake)){throw "CMake not found: $cmake"}
 
+# The native Velopack SDK is pinned independently from the .NET vpk packaging tool.
+# It is downloaded once into an ignored repository-local cache and reused by later builds.
+$velopackVersion='1.2.0'
+$velopackRoot=Join-Path $root "third_party\velopack\$velopackVersion"
+$velopackSdkScript=Join-Path $root 'packaging\get-velopack-sdk.ps1'
+& $velopackSdkScript -Version $velopackVersion -DestinationRoot $velopackRoot | Out-Null
+if(-not(Test-Path (Join-Path $velopackRoot 'include\Velopack.hpp'))){
+    throw "Velopack SDK is incomplete: $velopackRoot"
+}
+
 Push-Location $root
 try{
-    $configureArgs=@('-S','.','-B','build','-G','Visual Studio 17 2022','-A','x64')
+    $configureArgs=@('-S','.','-B','build','-G','Visual Studio 17 2022','-A','x64',"-DVELOPACK_ROOT=$velopackRoot")
     if($Version){$configureArgs += "-DVISUAL_VERSION_SEMVER=$Version"}
     & $cmake @configureArgs
     if($LASTEXITCODE-ne0){throw "CMake configure failed: $LASTEXITCODE"}

@@ -153,6 +153,7 @@ public:
     explicit Telemetry(const std::filesystem::path& path) : stream_(path, std::ios::out | std::ios::trunc) {
         if (!stream_) throw std::runtime_error("Unable to create Visual telemetry file");
         stream_ << "frame,qpc,zoom,tracking,poi_present,poi_source,locator_visible,viewport_action,view_left,view_top,view_right,view_bottom,present_hr,pointer_age_ms,uia_snapshot_age_ms,uia_caret_present,uia_focus_present,selected_poi_age_ms,selected_left,selected_top,selected_right,selected_bottom\n";
+        stream_.flush();
     }
 
     void frame(std::uint64_t sequence, LARGE_INTEGER qpc, int zoom, bool tracking, bool poiPresent,
@@ -169,7 +170,7 @@ public:
                 << pointerAgeMs << ',' << uiaSnapshotAgeMs << ',' << (uiaCaretPresent ? 1 : 0) << ','
                 << (uiaFocusPresent ? 1 : 0) << ',' << selectedPoiAgeMs << ','
                 << selectedRect.left << ',' << selectedRect.top << ',' << selectedRect.right << ',' << selectedRect.bottom << '\n';
-        if ((sequence % 120) == 0) stream_.flush();
+        if (sequence == 1 || (sequence % 120) == 0) stream_.flush();
     }
 
     void event(const std::string& name) {
@@ -486,6 +487,7 @@ public:
         token_ = framePool_.FrameArrived([this](const Direct3D11CaptureFramePool& sender, const winrt::Windows::Foundation::IInspectable&) { on_frame(sender); });
         session_.StartCapture();
         renderThread_ = std::jthread([this](std::stop_token stop) { render_loop(stop); });
+        telemetry_.event("capture_started");
     }
 
     void stop() noexcept {
@@ -529,6 +531,10 @@ private:
             winrt::com_ptr<ID3D11Texture2D> texture;
             winrt::check_hresult(access->GetInterface(__uuidof(ID3D11Texture2D), texture.put_void()));
             renderer_.cache_source(texture.get());
+            bool expected = false;
+            if (firstSourceFrameObserved_.compare_exchange_strong(expected, true, std::memory_order_relaxed)) {
+                telemetry_.event("first_source_frame");
+            }
         } catch (const winrt::hresult_error&) {
             fail_capture();
         } catch (...) {
@@ -572,6 +578,12 @@ private:
 
                 const HRESULT presentHr = renderer_.render_cached(sourceMonitor_.rect, view.viewport, locator);
                 if (presentHr != S_FALSE) {
+                    if (SUCCEEDED(presentHr)) {
+                        bool expected = false;
+                        if (firstRenderObserved_.compare_exchange_strong(expected, true, std::memory_order_relaxed)) {
+                            telemetry_.event("first_render_frame");
+                        }
+                    }
                     const double pointerAgeMs = age_ms(evidenceProvider_.last_pointer_movement_qpc(), nowQpc);
                     const double uiaSnapshotAgeMs = age_ms(uiaSnapshot.sampled_qpc, nowQpc);
                     const double selectedAgeMs = view.selected_poi ? age_ms(view.selected_poi->timestamp_qpc, nowQpc) : -1.0;
@@ -597,6 +609,7 @@ private:
     void fail_capture() noexcept {
         bool expected = false;
         if (failurePosted_.compare_exchange_strong(expected, true, std::memory_order_relaxed)) {
+            try { telemetry_.event("capture_failure"); } catch (...) {}
             g_captureFailed.store(true, std::memory_order_relaxed);
             PostMessageW(notifyWindow_, kCaptureErrorMessage, static_cast<WPARAM>(E_FAIL), 0);
         }
@@ -619,6 +632,8 @@ private:
     winrt::Windows::Graphics::SizeInt32 captureSize_{};
     std::jthread renderThread_{};
     std::atomic<bool> failurePosted_{false};
+    std::atomic<bool> firstSourceFrameObserved_{false};
+    std::atomic<bool> firstRenderObserved_{false};
     std::uint64_t sequence_{};
 };
 
@@ -740,7 +755,7 @@ WindowPlacement create_detail_window(HINSTANCE instance, const MonitorRecord& de
         exStyle |= WS_EX_TOPMOST;
     }
 
-    HWND hwnd = CreateWindowExW(exStyle, kWindowClass, L"Visual â€” Detail", style, x, y, width, height,
+    HWND hwnd = CreateWindowExW(exStyle, kWindowClass, L"Visual — Detail", style, x, y, width, height,
                                 nullptr, nullptr, instance, nullptr);
     if (!hwnd) winrt::throw_last_error();
     register_hotkeys(hwnd);
@@ -797,6 +812,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         }
 
         Telemetry telemetry(options.logPath);
+        telemetry.event("telemetry_started");
         auto window = create_detail_window(instance, monitors[destIndex], singleMonitor);
         Renderer renderer;
         renderer.initialize(window.hwnd, window.width, window.height);

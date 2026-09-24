@@ -33,13 +33,37 @@ target_include_directories(visual_core INTERFACE
 )
 target_compile_features(visual_core INTERFACE cxx_std_20)
 
+set(VELOPACK_ROOT "" CACHE PATH "Root of the pinned Velopack C/C++ SDK")
+if(VELOPACK_ROOT STREQUAL "")
+    message(FATAL_ERROR "VELOPACK_ROOT must point to the pinned Velopack C/C++ SDK. Run app/build.ps1 to acquire it.")
+endif()
+set(VELOPACK_INCLUDE_DIR "${VELOPACK_ROOT}/include")
+set(VELOPACK_IMPORT_LIB "${VELOPACK_ROOT}/lib/velopack_libc_win_x64_msvc.dll.lib")
+set(VELOPACK_RUNTIME_DLL "${VELOPACK_ROOT}/lib/velopack_libc_win_x64_msvc.dll")
+foreach(required_path IN ITEMS
+    "${VELOPACK_INCLUDE_DIR}/Velopack.h"
+    "${VELOPACK_INCLUDE_DIR}/Velopack.hpp"
+    "${VELOPACK_IMPORT_LIB}"
+    "${VELOPACK_RUNTIME_DLL}")
+    if(NOT EXISTS "${required_path}")
+        message(FATAL_ERROR "Pinned Velopack SDK file missing: ${required_path}")
+    endif()
+endforeach()
+
 add_executable(visual_app WIN32
+    src/velopack_entry.cpp
     src/main.cpp
     app.manifest
     ${VISUAL_GENERATED_DIR}/visual_version.rc
 )
+# Keep the existing application implementation intact but rename its WinMain symbol
+# for this translation unit. velopack_entry.cpp owns the real process entry point and
+# invokes Velopack before any Visual initialization.
+set_source_files_properties(src/main.cpp PROPERTIES COMPILE_DEFINITIONS "wWinMain=VisualProductMain")
+target_include_directories(visual_app PRIVATE ${VELOPACK_INCLUDE_DIR})
 target_link_libraries(visual_app PRIVATE
     visual_core
+    "${VELOPACK_IMPORT_LIB}"
     d3d11
     dxgi
     d3dcompiler
@@ -53,6 +77,12 @@ target_link_libraries(visual_app PRIVATE
 )
 target_compile_definitions(visual_app PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_compile_options(visual_app PRIVATE /W4 /permissive- /EHsc)
+add_custom_command(TARGET visual_app POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VELOPACK_RUNTIME_DLL}"
+        "$<TARGET_FILE_DIR:visual_app>/velopack_libc.dll"
+    COMMENT "Copying pinned Velopack runtime beside visual_app.exe"
+)
 
 add_executable(visual_diagnostics
     src/diagnostics_main.cpp
@@ -90,3 +120,4 @@ set_tests_properties(diagnostics_json PROPERTIES PASS_REGULAR_EXPRESSION "\\\"sc
 set_property(TARGET visual_app PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "Visual semantic version: ${VISUAL_VERSION_SEMVER}")
 message(STATUS "Visual package id/channel: ${VISUAL_PACKAGE_ID} / ${VISUAL_RELEASE_CHANNEL}")
+message(STATUS "Velopack C/C++ SDK root: ${VELOPACK_ROOT}")
