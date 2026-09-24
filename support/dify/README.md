@@ -1,67 +1,69 @@
-# Dify support prototype
+# Dify Cloud support prototype
 
 ## Purpose
 
-Use Dify Cloud initially as the hosted RAG/support layer for Visual alpha testers. No VPS is required for this first prototype.
+`Visual Support Alpha` is the hosted cloud support prototype for Visual alpha testing. Dify Cloud provides the chatflow, retrieval layer and model-provider integration. No local LLM, local Dify server or customer-side model key is required.
 
-The repository remains the authoritative source for support knowledge under `support/knowledge/`.
+The repository remains authoritative for reviewed support knowledge under `support/knowledge/`.
 
-## Initial Dify setup
+## Deployed test configuration
 
-Create one Dify Knowledge Base named:
+As of 2026-09-24:
 
-`Visual Alpha Support`
+- Dify Cloud app: `Visual Support Alpha`;
+- app type: Chatflow / advanced chat;
+- test LLM: `muse-spark-1.3-contributor`;
+- provider integration: Dify verified `OpenAI-API-compatible` plugin;
+- Meta API base: `https://api.meta.ai/v1`;
+- model/provider key: stored in Dify Cloud only, never in this repository or `Visual.exe`;
+- knowledge base: `Visual Support Knowledge Economical`;
+- indexing: Economical / inverted index;
+- retrieval: one knowledge base, multiple-retrieval mode with reranking disabled and Top K = 1;
+- citations/retriever resources: enabled;
+- published workflow label: `Support alpha final`.
 
-Upload the Markdown files under:
+The Economical knowledge base is intentional. The original High Quality knowledge base depended on Dify-hosted embedding/reranking credits. The current test path avoids that dependency and uses full-text retrieval instead.
 
-`support/knowledge/`
+## Knowledge upload
 
-Create one Chatbot/Chatflow named:
+Dify Sandbox allowed only one document in the initial upload flow, so `visual-support-knowledge.md` is a generated deployment bundle made from the reviewed Markdown files under `support/knowledge/visual/`.
 
-`Visual Support Alpha`
+Regenerate it with:
 
-Attach the `Visual Alpha Support` knowledge base and use `system-prompt.md` as the assistant instructions.
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\support\dify\build-knowledge.ps1
+```
 
-Enable file upload so a tester/support operator can attach the deterministic `visual-support-*.zip` or its `diagnostics.json` file. In the first prototype, the operator may unzip the bundle and upload `diagnostics.json` directly if Dify does not automatically extract ZIP contents in the selected workflow.
+Review/update the source files first; do not treat the generated bundle as the authoritative source.
 
-## Model choice
+## Safety boundary
 
-For the first proof-of-concept, use any strong general model available in the Dify workspace. The architecture intentionally does not depend on one provider.
+The prototype may:
 
-If Dify Cloud credits are insufficient, configure the chosen provider key directly in Dify's model-provider settings. Do not store provider keys in this repository or inside Visual.
-
-## Security boundary
-
-The first Dify prototype is advisory only.
-
-It may:
-
-- retrieve Visual support knowledge;
-- interpret structured diagnostics supplied by the user;
-- explain likely causes;
+- retrieve reviewed Visual support knowledge;
+- interpret diagnostics explicitly pasted into the conversation;
+- explain likely causes and known limitations;
 - recommend documented reversible checks;
-- escalate to human support.
+- escalate when evidence is insufficient.
 
 It must not:
 
-- run arbitrary shell/PowerShell commands on a tester PC;
+- run arbitrary commands on tester PCs;
 - hold administrator credentials;
-- install drivers/firmware;
-- receive GitHub/provider API keys from users;
+- disable security or invent driver/firmware changes;
+- request passwords, API keys or arbitrary personal files;
 - claim undocumented repairs as approved.
 
-## Later automation
+## Diagnostic files
 
-Once the manual prototype is useful, Dify's Knowledge API can synchronize repository documents programmatically. API keys must remain server-side. Do not embed a Dify API key in the public Windows client.
+Dify file upload is intentionally **disabled** in the published test workflow. The current chatflow does not yet contain a reviewed document-extraction/privacy path, so enabling an upload button would imply support that is not actually wired.
 
-A future in-app `Ask Support` feature should call a small authenticated backend/serverless proxy, which then calls Dify. That keeps Dify/model secrets out of `Visual.exe`.
+For now, use the structured, non-sensitive fields from `diagnostics.json` by pasting the relevant excerpt into the support conversation. A later workflow can add file ingestion after extraction, privacy and retention behavior are tested end to end.
 
-## Prototype validation cases
+## Evaluation
 
-Before using the assistant with outside testers, test it against at least these cases:
+All six cases in `evaluation-cases.md` passed against `muse-spark-1.3-contributor` on 2026-09-24. See `evaluation-results-2026-09-24.md`.
 
-1. HDMI/topology-change shutdown — should advise restore topology and relaunch, not reinstall drivers.
-2. Edge caret fallback — should identify this as a known alpha compatibility limitation.
-3. Fast pointer/caret lag report — should ask for version/telemetry and not assume the old defect persists.
-4. Single-monitor diagnostics — should explain that the normal two-screen scenario is unavailable without claiming hardware failure.
-5. Unknown issue — should explicitly say evidence is insufficient and escalate rather than inventing a fix.
+## Later Visual integration
+
+A future in-app `Ask Support` action should call a small authenticated server-side proxy which then calls Dify. Keep Dify and model-provider credentials out of the public Windows executable.

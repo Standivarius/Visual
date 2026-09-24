@@ -22,7 +22,9 @@ Current behavior:
 - `Ctrl+Alt+T` — tracking on/off
 - `Ctrl+Alt+Q` — exit Visual
 
-## Current alpha status
+## Current public alpha status
+
+Current public release: `0.1.0-alpha.3`.
 
 Validated in the current engineering environment:
 
@@ -32,15 +34,20 @@ Validated in the current engineering environment:
 - locator rendering;
 - exact normal-view return;
 - safe shutdown on physical HDMI topology change and successful relaunch after reconnect;
-- automated fast-pointer cadence stress with zero Present failures.
+- corrected PMv2 fast-pointer physical regression with zero locator-missing frames and zero Present failures;
+- Velopack native lifecycle startup;
+- clean installer lifecycle hook;
+- installed update check;
+- public alpha.2 -> alpha.3 application-driven download/apply update transport;
+- normal alpha.3 launch after update and graceful exit.
 
 Important limitations:
 
-- human regression after the latest fast-pointer/caret cadence fix is still pending;
 - reliable Chromium/Edge editing-caret tracking is not yet established;
-- no polished settings UI;
-- no Doxa hardware validation yet;
-- current public alpha packaging is unsigned until signing is added.
+- source-to-Detail pointer-boundary behavior still needs an explicit UX policy;
+- no polished settings/onboarding/update UI;
+- public alpha packages remain unsigned until signing is added;
+- no Doxa hardware validation yet.
 
 ## Support principle
 
