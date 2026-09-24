@@ -117,11 +117,23 @@ Current claim boundaries:
 1. package/feed production - proven;
 2. native Velopack lifecycle startup - proven locally for alpha.2;
 3. installed update-check transport - proven locally for alpha.2;
-4. download/apply transport - implemented, not end-to-end proven until a later public alpha is available;
+4. download/apply transport - proven end to end by installed public alpha.2 -> public alpha.3 using `--update-now`;
 5. user-facing automatic-update UX/policy - not implemented.
 
-Published alpha.1 cannot initiate alpha.1 -> alpha.2 itself because alpha.1 contains no update client. Once alpha.2 is public, a later alpha can be used to prove `--update-now` end to end.
+Published alpha.1 cannot initiate alpha.1 -> alpha.2 itself because alpha.1 contains no update client. The first application-driven proof therefore starts from public alpha.2 and is complete against public alpha.3 through `--update-now`.
 
+
+## Public alpha.2 -> alpha.3 update proof
+
+The application-driven update transport is now proven end to end against public releases:
+
+- installed public alpha.2 `--update-check` exited `10` and logged `available_version=0.1.0-alpha.3`;
+- installed public alpha.2 `--update-now` logged `download_start`, `download_complete`, then `result=apply_scheduled`;
+- Velopack replaced the installed tree and ProductVersion became `0.1.0-alpha.3`;
+- updated alpha.3 `--update-check` exited `0` with `result=no_update`;
+- updated alpha.3 launched normally and exited gracefully via `Ctrl+Alt+Q` with exit code `0`.
+
+The remaining update work is UX/policy, not transport plumbing.
 ## GitHub alpha release workflow
 
 `.github/workflows/release-alpha.yml` runs for tags matching `v*-alpha.*`.

@@ -144,7 +144,7 @@ visual_app.exe --update-now
 
 `--update-check` uses Velopack's native GitHub update source for `Standivarius/Visual` with prereleases enabled. Exit `0` means no newer release; exit `10` means an update is available.
 
-`--update-now` checks, downloads and schedules an available update for application after the process exits, without an automatic restart. That download/apply path is implemented but cannot be called end-to-end proven until a later public alpha exists for an installed alpha.2 to consume.
+`--update-now` checks, downloads and schedules an available update for application after the process exits, without an automatic restart. This path is now proven end to end: installed public alpha.2 detected public alpha.3, downloaded it, scheduled apply, and the installed ProductVersion changed to `0.1.0-alpha.3`. The updated alpha.3 then reported `result=no_update` and launched/exited normally through `Ctrl+Alt+Q`.
 
 Maintenance diagnostics are appended to `%LOCALAPPDATA%\Standivarius.Visual\visual_update.log`.
 
@@ -174,6 +174,6 @@ WGC size changes recreate the frame pool; capture-item closure and display-topol
 - source-to-Detail pointer-boundary UX policy needs a product decision;
 - trusted code signing is not configured;
 - no polished launcher/settings/onboarding/update UI exists;
-- update download/apply needs a later published alpha for end-to-end proof;
+- user-facing update prompts/settings/background policy are still not implemented;
 - persistent Doxa monitor roles/workspace recall are not implemented;
 - broader Doxa multi-display validation remains future work.

@@ -45,10 +45,10 @@ Current proof boundary:
 - packaging/feed production: proven;
 - lifecycle startup: proven locally for alpha.2;
 - installed update check: proven locally for alpha.2;
-- download/apply: implemented, awaiting a later public alpha for end-to-end proof;
+- download/apply: proven end to end by installed public alpha.2 -> public alpha.3 through `--update-now`;
 - polished automatic-update UX/policy: not implemented.
 
-Alpha.1 cannot initiate its own update to alpha.2 because it has no update client. Once alpha.2 is public, a later alpha can exercise the installed `--update-now` path.
+Alpha.1 cannot initiate its own update to alpha.2 because it has no update client. The first application-driven proof therefore starts from public alpha.2 and is complete against public alpha.3 through `--update-now`.
 
 ## Troubleshooting installation
 
