@@ -33,24 +33,39 @@ Running installed `visual_app.exe --update-now` reported:
 
 The installed tree subsequently changed to ProductVersion `0.1.0-alpha.3`.
 
-The package cache contained:
+The Velopack package cache contains `Standivarius.Visual-0.1.0-alpha.3-alpha-full.nupkg` with alpha.3 package metadata. Its reconstructed ZIP bytes differ from the public full-package ZIP, which is expected when a delta is applied, but the installed executable itself matches the public release payload exactly.
 
-`Standivarius.Visual-0.1.0-alpha.3-alpha-full.nupkg`
+Public alpha.3 full-package SHA-256:
 
-No updater process remained after apply completion.
+`32046ba54a4a24dc03d32cd0522039869dad0da760b8a89d71655d0c204d2164`
+
+`visual_app.exe` SHA-256 from the public alpha.3 full package:
+
+`5e3c4d0e137738c6fc7faa839f66f6537823abb2e284c131db5e76e1c6e0e29b`
+
+Installed alpha.3 `visual_app.exe` SHA-256:
+
+`5e3c4d0e137738c6fc7faa839f66f6537823abb2e284c131db5e76e1c6e0e29b`
+
+The hashes match exactly.
 
 ## Updated alpha.3 validation
 
-The updated installed alpha.3 then passed:
+The updated installed alpha.3 passed:
 
 - `visual_app.exe --update-check` exit `0`;
 - `installed_version=0.1.0-alpha.3`;
 - `result=no_update`;
-- ordinary Visual launch remained alive long enough for runtime sanity checking;
-- global `Ctrl+Alt+Q` caused a graceful normal-process exit code `0`.
+- ordinary launch remained alive after four seconds;
+- telemetry emitted `telemetry_started`, `capture_started`, `first_source_frame`, and `first_render_frame`;
+- global `Ctrl+Alt+Q` caused a graceful process exit code `0`.
+
+Fresh launch telemetry is preserved locally at:
+
+`artifacts/alpha3_normal_launch_telemetry.csv`
 
 ## Conclusion
 
-The native Velopack application-driven update transport is proven end to end for public `alpha.2 -> alpha.3`: check, detect, download, schedule apply, replace installed version, and run the updated application.
+The native Velopack application-driven update transport is proven end to end for public `alpha.2 -> alpha.3`: check, detect, download, schedule apply, replace the installed version, run the updated public binary, and confirm it is current against the public feed.
 
-What remains unimplemented is product UX/policy around update prompts, timing, restart behavior, settings and background checks—not the update transport itself.
+What remains is product UX/policy around update prompts, timing, restart behavior, settings and background checks - not the update transport itself.
