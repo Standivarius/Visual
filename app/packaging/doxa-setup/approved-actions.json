@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ai_actions": [
+    {
+      "id": "run_minimal_capture_probe",
+      "changes_system": false,
+      "requires_admin": false,
+      "description": "Run the Doxa/Visual capture health probe and return structured results."
+    },
+    {
+      "id": "recheck_doxa_devices",
+      "changes_system": false,
+      "requires_admin": false,
+      "description": "Re-enumerate the expected Doxa hardware and display functions."
+    },
+    {
+      "id": "retry_post_install_health",
+      "changes_system": false,
+      "requires_admin": false,
+      "description": "Repeat the bounded post-install Doxa health check."
+    },
+    {
+      "id": "collect_support_bundle",
+      "changes_system": false,
+      "requires_admin": false,
+      "description": "Collect the approved structured installation/support evidence bundle."
+    },
+    {
+      "id": "escalate_it",
+      "changes_system": false,
+      "requires_admin": false,
+      "description": "Stop local remediation and return a machine-readable enterprise IT escalation."
+    }
+  ],
+  "note": "Version 1 deliberately gives the AI only diagnostic/escalation actions. Mutating installation actions remain deterministic local code."
+}

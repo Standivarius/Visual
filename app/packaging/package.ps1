@@ -2,7 +2,8 @@ param(
     [string]$Version='',
     [ValidateSet('Debug','Release','RelWithDebInfo','MinSizeRel')][string]$Configuration='Release',
     [string]$OutputDir='',
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$EnterpriseMsi
 )
 $ErrorActionPreference='Stop'
 
@@ -90,17 +91,26 @@ try{
     # pinned native SDK and runs VelopackApp at the start of the real wWinMain.
     # --yes makes repeated local/CI packaging deterministic when generic Setup/feed
     # filenames already exist in the retained release directory.
-    & $dotnetPath tool run vpk --yes pack `
-        --packId 'Standivarius.Visual' `
-        --packVersion $Version `
-        --packDir $stage `
-        --mainExe 'visual_app.exe' `
-        --packAuthors 'Standivarius' `
-        --packTitle 'Visual Alpha' `
-        --channel 'alpha' `
-        --framework 'vcredist143-x64' `
-        --releaseNotes (Join-Path $PSScriptRoot 'RELEASE_NOTES.md') `
-        --outputDir $OutputDir
+    $packArgs=@(
+        '--yes','pack',
+        '--packId','Standivarius.Visual',
+        '--packVersion',$Version,
+        '--packDir',$stage,
+        '--mainExe','visual_app.exe',
+        '--packAuthors','Standivarius',
+        '--packTitle','Visual Alpha',
+        '--channel','alpha',
+        '--framework','vcredist143-x64',
+        '--releaseNotes',(Join-Path $PSScriptRoot 'RELEASE_NOTES.md'),
+        '--outputDir',$OutputDir
+    )
+    if($EnterpriseMsi){
+        # Enterprise deployments need a machine-wide artifact that can be deployed
+        # by Intune/ConfigMgr under SYSTEM without relying on the end user's rights.
+        # Velopack generates the MSI via WiX and keeps the same app/update layout.
+        $packArgs += @('--msi','true','--instLocation','PerMachine')
+    }
+    & $dotnetPath tool run vpk @packArgs
     if($LASTEXITCODE-ne0){throw "Velopack packaging failed: $LASTEXITCODE"}
 }finally{
     Pop-Location

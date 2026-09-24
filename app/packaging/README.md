@@ -56,6 +56,18 @@ To package an already-built matching version:
 
 Do not use `-SkipBuild` for a version different from the binaries already built.
 
+## Enterprise MSI
+
+For enterprise deployment, reuse Velopack's MSI generation instead of maintaining a second installer project:
+
+```powershell
+.\app\packaging\package.ps1 -Version 0.1.0-alpha.3 -EnterpriseMsi
+```
+
+`-EnterpriseMsi` adds Velopack `--msi --instLocation PerMachine`, producing a machine-wide MSI suitable for SYSTEM-context deployment through Intune/Configuration Manager. The MSI can be deployed directly. Organizations that standardize on PSAppDeployToolkit can wrap the same MSI using PSADT rather than a Doxa-specific enterprise wrapper.
+
+A 2026-09-25 local packaging proof produced `Standivarius.Visual-alpha.msi`; Windows Installer metadata reported `ALLUSERS=1`, confirming per-machine scope.
+
 ## Verification
 
 Candidate verification:
