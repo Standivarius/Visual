@@ -1,22 +1,15 @@
-# Visual 0.1.0-alpha.2
+# Visual 0.1.0-alpha.3
 
-Visual is an early two-monitor engineering alpha for low-vision magnification research and Doxa development.
+Visual 0.1.0-alpha.3 is a focused update-transport validation prerelease.
 
-## Changes in alpha.2
+There are no intended magnifier-behavior changes relative to alpha.2. This release exists to provide a genuine newer public alpha target so an installed alpha.2 can exercise the native Velopack `--update-check` and `--update-now` path end to end.
 
-- adds native Velopack 1.2.0 lifecycle startup at the real Windows process entry point;
-- packages the native Velopack runtime under the imported name `velopack_libc.dll`;
-- removes the previous `--skipVeloAppCheck` packaging bypass;
-- adds explicit installed-app `--update-check` and `--update-now` engineering commands;
-- hardens telemetry startup/capture markers so failed physical regression runs preserve useful evidence;
-- retains GPU magnification, pointer/caret/focus tracking, viewport following, target locator, zoom hotkeys and exact normal-view return.
+It retains the alpha.2 lifecycle/runtime fixes:
 
-Local release verification completed successfully on 2026-09-24: Release build, CTest 5/5, normal Velopack packaging, clean Setup lifecycle hook, installed alpha.2 ProductVersion and installed GitHub update check all passed.
+- native Velopack 1.2.0 lifecycle startup at the real Windows process entry point;
+- correctly packaged `velopack_libc.dll` runtime;
+- normal Velopack application validation with no `--skipVeloAppCheck`;
+- installed `--update-check` and `--update-now` engineering commands;
+- hardened telemetry startup/capture markers.
 
-## Known limitations
-
-- packages are unsigned development alphas;
-- reliable browser editing-caret behavior is not yet validated;
-- product settings/onboarding/update UI are unfinished;
-- source-to-Detail cursor-boundary behavior still needs an explicit UX policy;
-- the `--update-now` download/apply path requires a later published alpha for end-to-end proof.
+The alpha.3 release will be considered successful only after an installed public alpha.2 detects, downloads and applies it through the application-driven update path.

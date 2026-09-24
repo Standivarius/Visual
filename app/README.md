@@ -27,7 +27,7 @@ Release outputs:
 - `app\build\Release\visual_diagnostics.exe`
 - `app\build\Release\velopack_libc.dll`
 
-The canonical default version is `0.1.0-alpha.2` in `app\version.cmake`. A build can override it with `-Version <semver>`.
+The canonical default version is `0.1.0-alpha.3` in `app\version.cmake`. A build can override it with `-Version <semver>`.
 
 The native build acquires the pinned Velopack 1.2.0 C/C++ SDK into the ignored `app\third_party\velopack\` cache, builds Visual, and runs the five CTest tests. Ordinary native builds do not require a .NET SDK.
 

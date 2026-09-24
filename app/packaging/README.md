@@ -7,7 +7,7 @@ Visual uses Velopack 1.2.0 for Windows alpha packaging, native lifecycle startup
 - package id: `Standivarius.Visual`
 - friendly name: `Visual Alpha`
 - channel: `alpha`
-- canonical default version: `0.1.0-alpha.2`
+- canonical default version: `0.1.0-alpha.3`
 - public repository: `https://github.com/Standivarius/Visual`
 
 ## Pinned toolchain
