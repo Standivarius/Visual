@@ -4,6 +4,11 @@
 
 The second PC authenticates to this proxy with an expendable lab token. The proxy holds the model-provider credential and calls either Dify Cloud or Meta/Muse. Provider credentials never belong in the pilot ZIP.
 
+## Current lab app
+
+The installer pilot now uses the published Dify Chatflow `Doxa Installer Planner` (app ID `4568517a-3cec-4f05-a4f4-add9f177206a`) with the `Muse Spark 1.3 Contributor` model through the verified OpenAI-compatible provider.
+
+The app API key is stored server-side on MARIUS-DELL for the lab and must never be copied into the pilot ZIP.
 ## Dify mode
 
 Create an app API key inside the Dify app. To avoid putting the key in chat or command history, store it locally on MARIUS-DELL with:
