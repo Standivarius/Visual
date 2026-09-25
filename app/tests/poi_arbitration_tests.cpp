@@ -45,6 +45,22 @@ int main() {
     }
 
     {
+        const std::uint64_t now = 25'000;
+        const auto preexistingCaret = make(PoiKind::Caret, PoiSource::UiaTextPattern2Caret, now - 200);
+        const auto stoppedPointer = make(PoiKind::Pointer, PoiSource::Pointer, now - 150); // pointer stale, but newer than caret
+        const auto best = select_best_poi({preexistingCaret, stoppedPointer}, now, freq);
+        require(!best.has_value(), "pre_pointer_caret_suppressed", "caret evidence from before pointer movement must not reclaim the viewport", failures);
+    }
+
+    {
+        const std::uint64_t now = 27'000;
+        const auto stoppedPointer = make(PoiKind::Pointer, PoiSource::Pointer, now - 150);
+        const auto movedCaret = make(PoiKind::Caret, PoiSource::UiaTextPattern2Caret, now - 5);
+        const auto best = select_best_poi({stoppedPointer, movedCaret}, now, freq);
+        require(best.has_value(), "post_pointer_caret_resumes", "caret movement after pointer intent should resume tracking", failures);
+        if (best) require(best->source == PoiSource::UiaTextPattern2Caret, "post_pointer_caret_resumes", "newer caret should own the viewport", failures);
+    }
+    {
         const std::uint64_t now = 30'000;
         const auto explicitTarget = make(PoiKind::ExplicitTarget, PoiSource::ExplicitUserTarget, now - 10);
         const auto pointer = make(PoiKind::Pointer, PoiSource::Pointer, now - 1);

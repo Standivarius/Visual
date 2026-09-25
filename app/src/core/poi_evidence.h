@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -95,9 +96,20 @@ struct PoiSelectionPolicy {
     std::uint64_t now_qpc,
     std::uint64_t qpc_frequency,
     const PoiSelectionPolicy& policy = {}) noexcept {
+    // A pointer movement is an intent barrier: caret/focus evidence that predates the
+    // most recent pointer movement must not reclaim the viewport after the pointer's
+    // short freshness window expires. Only semantic activity observed after that
+    // pointer movement may take control back.
+    std::uint64_t latest_pointer_qpc = 0;
+    for (const auto& c : candidates) {
+        if (c.kind == PoiKind::Pointer && c.usable()) latest_pointer_qpc = std::max(latest_pointer_qpc, c.timestamp_qpc);
+    }
+
     std::optional<PoiCandidate> best;
     for (const auto& c : candidates) {
         if (!is_fresh(c, now_qpc, qpc_frequency, policy)) continue;
+        if ((c.kind == PoiKind::Caret || c.kind == PoiKind::Focus)
+            && latest_pointer_qpc != 0 && c.timestamp_qpc <= latest_pointer_qpc) continue;
         if (!best) { best = c; continue; }
         const int cr = source_priority(c.source) * 10 + static_cast<int>(c.confidence);
         const int br = source_priority(best->source) * 10 + static_cast<int>(best->confidence);
