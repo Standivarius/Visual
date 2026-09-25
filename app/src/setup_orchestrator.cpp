@@ -20,6 +20,22 @@ namespace {
 
 constexpr int kSetupHealthTimeoutMs = 7000;
 constexpr DWORD kChildWaitMs = 20000;
+constexpr DWORD kSetupMutexWaitMs = 180000;
+constexpr wchar_t kSetupMutexName[] = L"Local\\Standivarius.Visual.Setup.v1";
+
+struct SetupMutexGuard {
+    HANDLE handle{};
+    bool owned{};
+
+    ~SetupMutexGuard() {
+        if (owned && handle) ReleaseMutex(handle);
+        if (handle) CloseHandle(handle);
+    }
+
+    SetupMutexGuard(const SetupMutexGuard&) = delete;
+    SetupMutexGuard& operator=(const SetupMutexGuard&) = delete;
+    SetupMutexGuard() = default;
+};
 
 std::filesystem::path module_path() {
     std::wstring buffer(32768, L'\0');
@@ -370,6 +386,39 @@ int run_first_setup_if_needed(bool force) {
     if (!force && !installed_copy()) return 0;
     if (!force && marker_exists()) return 0;
 
+    SetupMutexGuard setupMutex;
+    setupMutex.handle = CreateMutexW(nullptr, FALSE, kSetupMutexName);
+    if (!setupMutex.handle) {
+        append_log("setup_mutex_create_failed win32=" + std::to_string(GetLastError()));
+        show_message(L"Visual could not coordinate first-run setup with another Visual process.", MB_OK | MB_ICONERROR);
+        return 56;
+    }
+
+    DWORD wait = WaitForSingleObject(setupMutex.handle, 0);
+    if (wait == WAIT_TIMEOUT) {
+        append_log("setup_mutex_wait");
+        wait = WaitForSingleObject(setupMutex.handle, kSetupMutexWaitMs);
+    }
+    if (wait == WAIT_OBJECT_0) {
+        setupMutex.owned = true;
+    } else if (wait == WAIT_ABANDONED) {
+        setupMutex.owned = true;
+        append_log("setup_mutex_abandoned");
+    } else if (wait == WAIT_TIMEOUT) {
+        append_log("setup_mutex_timeout");
+        show_message(L"Another Visual setup process is still running. Please wait for it to finish, then start Visual again.", MB_OK | MB_ICONWARNING);
+        return 57;
+    } else {
+        append_log("setup_mutex_wait_failed win32=" + std::to_string(GetLastError()));
+        show_message(L"Visual could not coordinate first-run setup with another Visual process.", MB_OK | MB_ICONERROR);
+        return 58;
+    }
+
+    if (!force && marker_exists()) {
+        append_log("setup_peer_completed");
+        return 0;
+    }
+
     append_log(std::string("setup_start version=") + visual::version::kSemanticVersion);
     const auto root = setup_root();
     if (root.empty()) {
@@ -402,7 +451,19 @@ int run_first_setup_if_needed(bool force) {
     const std::string action = json_string_field(cloudResult.body, "action");
     const std::string provider = json_string_field(cloudResult.body, "provider");
     const std::string reason = json_string_field(cloudResult.body, "reason");
+    const std::string configuredModelId = json_string_field(cloudResult.body, "configured_model_id");
+    const std::string difyMessageId = json_string_field(cloudResult.body, "dify_message_id");
+    const std::string difyConversationId = json_string_field(cloudResult.body, "dify_conversation_id");
+    const std::string difyTaskId = json_string_field(cloudResult.body, "dify_task_id");
     append_log("cloud_decision outcome=" + outcome + " action=" + action + " provider=" + provider);
+    if (outcome == "ai_plan") {
+        std::string trace = "cloud_ai_trace";
+        if (!configuredModelId.empty()) trace += " configured_model_id=" + configuredModelId;
+        if (!difyMessageId.empty()) trace += " dify_message_id=" + difyMessageId;
+        if (!difyConversationId.empty()) trace += " dify_conversation_id=" + difyConversationId;
+        if (!difyTaskId.empty()) trace += " dify_task_id=" + difyTaskId;
+        append_log(trace);
+    }
 
     if (outcome == "installed_ok") return complete_setup("provider=" + provider);
 

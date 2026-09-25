@@ -6,6 +6,13 @@ const ALLOWED_ACTIONS = new Set([
   "escalate_it",
 ]);
 
+const PLANNER_IDENTITY = Object.freeze({
+  appId: "4568517a-3cec-4f05-a4f4-add9f177206a",
+  appName: "Doxa Installer Planner",
+  modelId: "muse-spark-1.3-contributor",
+  modelName: "Muse Spark 1.3 Contributor",
+});
+
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), {
     status,
@@ -98,7 +105,17 @@ async function callDify(env, state, clientId) {
   if (!response.ok) throw new Error(`Dify returned HTTP ${response.status}.`);
   const payload = await response.json();
   if (typeof payload.answer !== "string") throw new Error("Dify response did not contain answer.");
-  return normalizePlan(payload.answer);
+  const messageId = typeof payload.message_id === "string"
+    ? payload.message_id
+    : (typeof payload.id === "string" ? payload.id : "");
+  return {
+    plan: normalizePlan(payload.answer),
+    trace: {
+      task_id: typeof payload.task_id === "string" ? payload.task_id : "",
+      message_id: messageId,
+      conversation_id: typeof payload.conversation_id === "string" ? payload.conversation_id : "",
+    },
+  };
 }
 
 export default {
@@ -106,7 +123,7 @@ export default {
     try {
       const url = new URL(request.url);
       if (request.method === "GET" && url.pathname === "/health") {
-        return json({ ok: true, service: "doxa-installer-planner", provider: "dify", schema_version: "1" });
+        return json({ ok: true, service: "doxa-installer-planner", provider: "dify", schema_version: "1", dify_app_id: PLANNER_IDENTITY.appId, configured_model_id: PLANNER_IDENTITY.modelId, model_identity_source: "worker_config" });
       }
       if (request.method !== "POST" || url.pathname !== "/v1/plan") return json({ error: "not_found" }, 404);
       if (env.DOXA_CLIENT_TOKEN) {
@@ -125,7 +142,8 @@ export default {
         return json({ schema_version: "1", decision: { ...deterministic, provider: "deterministic" } });
       }
 
-      const plan = await callDify(env, input.state, input.client_id);
+      const dify = await callDify(env, input.state, input.client_id);
+      const plan = dify.plan;
       const action = String(plan.action || "");
       if (!ALLOWED_ACTIONS.has(action)) throw new Error(`Planner selected action outside allowlist: ${action}`);
       return json({
@@ -138,6 +156,14 @@ export default {
           confidence: String(plan.confidence || "low"),
           needs_it: Boolean(plan.needs_it),
           provider: "dify",
+          dify_app_id: PLANNER_IDENTITY.appId,
+          dify_app_name: PLANNER_IDENTITY.appName,
+          configured_model_id: PLANNER_IDENTITY.modelId,
+          configured_model_name: PLANNER_IDENTITY.modelName,
+          model_identity_source: "worker_config",
+          dify_task_id: dify.trace.task_id,
+          dify_message_id: dify.trace.message_id,
+          dify_conversation_id: dify.trace.conversation_id,
         },
       });
     } catch (error) {

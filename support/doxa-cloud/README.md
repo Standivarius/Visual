@@ -26,6 +26,14 @@ $env:DOXA_LAB_TOKEN = '<temporary-random-token>'
 
 The proxy uses Dify Cloud's app API base `https://api.dify.ai/v1` and `POST /chat-messages` in blocking mode. It sends the structured installer state inside a constrained planner prompt and accepts only actions present in `app/packaging/doxa-setup/approved-actions.json`.
 
+### Planner audit evidence
+
+The permanent Worker returns the Dify `task_id` (when present), `message_id`/`id`, and `conversation_id` with every `ai_plan`. These are execution identifiers returned by Dify and are safe to retain in setup evidence.
+
+The Worker also returns the configured, non-secret planner identity from tracked Worker configuration: app ID/name and model ID/name (`muse-spark-1.3-contributor` / `Muse Spark 1.3 Contributor`). These fields are explicitly labelled as configured identity (`model_identity_source=worker_config`); they are not presented as model-name fields returned by the Dify Service API. The Dify message/conversation IDs are the transaction trace keys to correlate with Dify/observability logs when audit-grade proof of the executed model is required.
+
+The Windows setup orchestrator stores the full Worker response in `cloud-response.json` and logs `cloud_ai_trace` with the configured model ID plus Dify message/task/conversation IDs. No provider credential is written to client logs.
+
 For temporary cross-machine testing, expose only the proxy port with an HTTPS tunnel such as Cloudflare Quick Tunnel. Do not expose the repository bridge as the installer endpoint.
 
 ## Meta fallback
