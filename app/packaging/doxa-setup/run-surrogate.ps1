@@ -32,10 +32,7 @@ function Test-PendingReboot {
         'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
     )
     foreach($path in $checks){if(Test-Path $path){return $true}}
-    try{
-        $value=(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -ErrorAction Stop).PendingFileRenameOperations
-        if($null-ne$value -and @($value).Count-gt0){return $true}
-    }catch{}
+
     return $false
 }
 

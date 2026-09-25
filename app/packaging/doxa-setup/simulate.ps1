@@ -1,7 +1,10 @@
 param(
     [Parameter(Mandatory=$true)][string]$Scenario,
     [switch]$UseMuse,
-    [string]$Model='muse-spark-1.3-contributor'
+    [string]$Model='muse-spark-1.3-contributor',
+    [string]$PlannerUrl='',
+    [string]$PlannerToken='',
+    [string]$ClientId='doxa-lab'
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -59,6 +62,29 @@ function Resolve-Local($s){
     return New-Decision 'needs_ai_plan' 'none' 'The deterministic baseline passed, but the remaining failure needs exception diagnosis.'
 }
 
+function Invoke-RemotePlan($s,$actions,[string]$url,[string]$token,[string]$clientId){
+    if([string]::IsNullOrWhiteSpace($url)){throw 'PlannerUrl is required.'}
+    if([string]::IsNullOrWhiteSpace($token)){throw 'PlannerToken is required.'}
+    $allowed=@($actions.ai_actions | ForEach-Object {[string]$_.id})
+    $headers=@{Authorization="Bearer $token";'Content-Type'='application/json'}
+    $body=@{schema_version='1';client_id=$clientId;state=$s}|ConvertTo-Json -Depth 12
+    $endpoint=$url.TrimEnd('/')+'/v1/plan'
+    $r=Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -Body $body -TimeoutSec 90
+    if(-not($r.PSObject.Properties.Name -contains 'decision')){throw 'Planner response did not contain decision.'}
+    $decision=$r.decision
+    if([string]$decision.outcome -ne 'ai_plan'){throw "Planner returned unexpected outcome: $($decision.outcome)"}
+    if($allowed -notcontains [string]$decision.action){throw "Remote planner selected an action outside the allowlist: $($decision.action)"}
+    return [pscustomobject]@{
+        outcome='ai_plan'
+        action=[string]$decision.action
+        reason=[string]$decision.reason
+        used_ai=$true
+        confidence=[string]$decision.confidence
+        needs_it=[bool]$decision.needs_it
+        provider=if($decision.PSObject.Properties.Name -contains 'provider'){[string]$decision.provider}else{'remote'}
+        planner='doxa_cloud'
+    }
+}
 function Invoke-MusePlan($s,$actions,[string]$model){
     $key=$env:META_API_KEY
     if(-not$key){throw 'META_API_KEY is not available for the lab simulation.'}
@@ -105,9 +131,10 @@ Return JSON only with this exact shape:
 $scenarioObj=Read-Json ([IO.Path]::GetFullPath($Scenario))
 $actions=Read-Json (Join-Path $PSScriptRoot 'approved-actions.json')
 $decision=Resolve-Local $scenarioObj.state
-if($decision.outcome -eq 'needs_ai_plan' -and $UseMuse){
+if($decision.outcome -eq 'needs_ai_plan' -and ($UseMuse -or $PlannerUrl)){
     try{
-        $decision=Invoke-MusePlan $scenarioObj.state $actions $Model
+        if($PlannerUrl){$decision=Invoke-RemotePlan $scenarioObj.state $actions $PlannerUrl $PlannerToken $ClientId}
+        else{$decision=Invoke-MusePlan $scenarioObj.state $actions $Model}
     }catch{
         $decision=[pscustomobject]@{
             outcome='ai_plan_failed'
