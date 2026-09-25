@@ -6,7 +6,13 @@ The second PC authenticates to this proxy with an expendable lab token. The prox
 
 ## Dify mode
 
-Set `DIFY_API_KEY` on the proxy host to an app API key created inside the Dify app, then run:
+Create an app API key inside the Dify app. To avoid putting the key in chat or command history, store it locally on MARIUS-DELL with:
+
+```powershell
+.\support\doxa-cloud\configure-dify-key.ps1
+```
+
+The helper prompts locally, does not print the key, and stores it only in the current Windows user's environment for this lab. Use `-Clear` after the pilot if desired. Then run:
 
 ```powershell
 $env:DOXA_LAB_TOKEN = '<temporary-random-token>'
