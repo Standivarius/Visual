@@ -26,6 +26,12 @@ file(MAKE_DIRECTORY ${VISUAL_GENERATED_DIR})
 configure_file(src/version.h.in ${VISUAL_GENERATED_DIR}/visual_version.h @ONLY)
 configure_file(src/version.rc.in ${VISUAL_GENERATED_DIR}/visual_version.rc @ONLY)
 
+set(VISUAL_DOXA_CLOUD_URL "https://doxa-installer-planner.marius-moldovan.workers.dev" CACHE STRING "Doxa installer planner base URL")
+if(NOT DEFINED VISUAL_DOXA_CLOUD_TOKEN OR VISUAL_DOXA_CLOUD_TOKEN STREQUAL "")
+    set(VISUAL_DOXA_CLOUD_TOKEN "$ENV{DOXA_CLOUD_CLIENT_TOKEN}")
+endif()
+configure_file(src/cloud_config.h.in ${VISUAL_GENERATED_DIR}/visual_cloud_config.h @ONLY)
+
 add_library(visual_core INTERFACE)
 target_include_directories(visual_core INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -52,6 +58,7 @@ endforeach()
 
 add_executable(visual_app WIN32
     src/velopack_entry.cpp
+    src/setup_orchestrator.cpp
     src/main.cpp
     app.manifest
     ${VISUAL_GENERATED_DIR}/visual_version.rc
@@ -70,6 +77,7 @@ target_link_libraries(visual_app PRIVATE
     windowsapp
     shell32
     advapi32
+    winhttp
     user32
     gdi32
     ole32

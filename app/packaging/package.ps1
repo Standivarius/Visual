@@ -55,6 +55,7 @@ Global hotkeys:
   Ctrl+Alt+Q  exit Visual
 
 This is an unsigned development alpha. Windows may show SmartScreen or publisher warnings.
+On the first installed launch, Visual automatically checks the two-monitor graphics path and connects to Doxa cloud setup support.
 Use visual_diagnostics.exe, or the support-bundle script from the source repository, when reporting a problem.
 "@ | Set-Content -Encoding UTF8 (Join-Path $stage 'README.txt')
 

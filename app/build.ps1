@@ -5,6 +5,13 @@ param(
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# The lab cloud client token is persisted only in the current Windows user
+# environment. Copy it into this build process without printing or committing it.
+if([string]::IsNullOrWhiteSpace($env:DOXA_CLOUD_CLIENT_TOKEN)){
+    $persistedDoxaToken=[Environment]::GetEnvironmentVariable('DOXA_CLOUD_CLIENT_TOKEN','User')
+    if(-not[string]::IsNullOrWhiteSpace($persistedDoxaToken)){$env:DOXA_CLOUD_CLIENT_TOKEN=$persistedDoxaToken}
+}
+
 $cmakeCommand=Get-Command cmake.exe -ErrorAction SilentlyContinue
 if($cmakeCommand){
     $cmake=$cmakeCommand.Source

@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <shellapi.h>
 #include "Velopack.hpp"
+#include "setup_orchestrator.h"
 
 #include <cstdio>
 #include <filesystem>
@@ -25,6 +26,17 @@ struct MaintenanceOptions {
     bool applyUpdate{};
 };
 
+bool has_command_line_argument(const wchar_t* expected) {
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (!argv) return false;
+    bool found = false;
+    for (int i = 1; i < argc; ++i) {
+        if (_wcsicmp(argv[i], expected) == 0) { found = true; break; }
+    }
+    LocalFree(argv);
+    return found;
+}
 MaintenanceOptions parse_maintenance_options() {
     MaintenanceOptions result{};
     int argc = 0;
@@ -150,6 +162,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previousInstance, PWSTR comman
     const auto maintenance = parse_maintenance_options();
     if (maintenance.applyUpdate || maintenance.checkUpdate) {
         return run_update_maintenance(maintenance);
+    }
+
+    // The bounded graphics probe is launched by the setup orchestrator itself;
+    // never recurse into setup while that child process is running.
+    const bool healthCheck = has_command_line_argument(L"--health-check");
+    const bool skipSetup = has_command_line_argument(L"--skip-setup");
+    const bool forceSetup = has_command_line_argument(L"--setup-check");
+    if (!healthCheck && !skipSetup) {
+        const int setupResult = visual::setup::run_first_setup_if_needed(forceSetup);
+        if (setupResult != 0 || forceSetup) return setupResult;
     }
 
     return VisualProductMain(instance, previousInstance, commandLine, showCommand);

@@ -1,3 +1,13 @@
+# Visual 0.1.0-alpha.5
+
+Visual 0.1.0-alpha.5 is the first normal-install Doxa cloud-assistance pilot.
+
+A standard Velopack installation now performs the Doxa setup check automatically on the first installed launch. It verifies the two-display Windows baseline, runs the real bounded WGC/D3D graphics health check, sends only structured setup state to the permanent Doxa Cloudflare Worker, and follows only approved diagnostic/escalation actions. The Worker keeps the Dify Service API key server-side and calls the published `Doxa Installer Planner` app, which uses Muse Spark 1.3 Contributor for ambiguous failures.
+
+Healthy installations complete deterministically after the cloud connection is verified; Dify/Muse is invoked only when the deterministic checks leave an ambiguous problem. Setup state is retained under Local AppData so a failed first run can be retried by starting Visual again.
+
+The physical Silicon Motion/Doxa hardware layer remains simulated until the production unit is available.
+
 # Visual 0.1.0-alpha.4
 
 Visual 0.1.0-alpha.4 is the first portable two-monitor Doxa lifecycle pilot.
