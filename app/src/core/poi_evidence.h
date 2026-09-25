@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -39,6 +40,14 @@ struct PoiCandidate {
     [[nodiscard]] bool usable() const noexcept { return screen_rect.valid() && timestamp_qpc != 0; }
 };
 
+[[nodiscard]] inline bool same_poi_target(const PoiCandidate& a, const PoiCandidate& b, double tolerance_px = 0.5) noexcept {
+    if (a.kind != b.kind || a.source != b.source || a.process_id != b.process_id || a.identity != b.identity) return false;
+    const auto within_tolerance = [tolerance_px](double x, double y) noexcept { return std::abs(x - y) <= tolerance_px; };
+    return within_tolerance(a.screen_rect.left, b.screen_rect.left)
+        && within_tolerance(a.screen_rect.top, b.screen_rect.top)
+        && within_tolerance(a.screen_rect.right, b.screen_rect.right)
+        && within_tolerance(a.screen_rect.bottom, b.screen_rect.bottom);
+}
 struct PoiSelectionPolicy {
     double max_caret_age_ms{250.0};
     double max_focus_age_ms{500.0};

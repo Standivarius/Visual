@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace visual::tracking {
@@ -55,7 +56,7 @@ private:
         if (intersects(pointer.screen_rect, source)) out.push_back(pointer);
     }
 
-    static void sample_gui_thread(const core::ScreenRect& source, std::uint64_t now_qpc,
+    void sample_gui_thread(const core::ScreenRect& source, std::uint64_t now_qpc,
                                   std::vector<core::PoiCandidate>& out) noexcept {
         HWND foreground = GetForegroundWindow();
         if (!foreground) return;
@@ -83,6 +84,9 @@ private:
                 };
                 caret.timestamp_qpc = now_qpc;
                 caret.process_id = foreground_pid;
+                caret.identity = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(gui.hwndCaret));
+                if (last_caret_ && core::same_poi_target(caret, *last_caret_)) caret.timestamp_qpc = last_caret_->timestamp_qpc;
+                last_caret_ = caret;
                 if (intersects(caret.screen_rect, source)) out.push_back(caret);
             }
         }
@@ -100,6 +104,9 @@ private:
                 };
                 focus.timestamp_qpc = now_qpc;
                 focus.process_id = foreground_pid;
+                focus.identity = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(gui.hwndFocus));
+                if (last_focus_ && core::same_poi_target(focus, *last_focus_)) focus.timestamp_qpc = last_focus_->timestamp_qpc;
+                last_focus_ = focus;
                 if (intersects(focus.screen_rect, source)) out.push_back(focus);
             }
         }
@@ -108,6 +115,8 @@ private:
     POINT last_pointer_{};
     bool have_last_pointer_{};
     std::uint64_t last_pointer_movement_qpc_{};
+    std::optional<core::PoiCandidate> last_caret_{};
+    std::optional<core::PoiCandidate> last_focus_{};
 };
 
 } // namespace visual::tracking

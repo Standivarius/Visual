@@ -1,3 +1,11 @@
+# Visual 0.1.0-alpha.6
+
+Visual 0.1.0-alpha.6 fixes pointer-versus-caret/focus arbitration discovered during the ASUS two-monitor test.
+
+Stationary caret and focus observations no longer become fresh user intent merely because UI Automation or Win32 sampled them again. Their activity timestamp is retained until the target actually moves or changes. This prevents a blinking/stationary text caret from pulling the magnified viewport back after deliberate mouse movement, while real keyboard caret movement and focus changes still resume tracking normally.
+
+Validation on MARIUS-DELL: all five CTests pass; Chromium editing smoke passes with 150 semantic-caret frames and zero present failures; fast-pointer stress passes; and a targeted stationary-caret test observed zero caret/focus reclaim frames during the 150-650 ms interval after pointer movement stopped.
+
 # Visual 0.1.0-alpha.5
 
 Visual 0.1.0-alpha.5 is the first normal-install Doxa cloud-assistance pilot.

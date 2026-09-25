@@ -202,19 +202,30 @@ private:
 
                 bool current_caret = false;
                 bool current_focus = false;
-                std::optional<core::PoiCandidate> fresh_semantic_caret;
-                for (const auto& candidate : sampled) {
-                    if (is_semantic_caret(candidate)) {
+                std::optional<std::size_t> semantic_caret_index;
+                std::optional<std::size_t> focus_index;
+                for (std::size_t i = 0; i < sampled.size(); ++i) {
+                    if (is_semantic_caret(sampled[i])) {
                         current_caret = true;
-                        fresh_semantic_caret = candidate;
+                        semantic_caret_index = i;
                     }
-                    if (candidate.source == core::PoiSource::UiaFocus) current_focus = true;
+                    if (sampled[i].source == core::PoiSource::UiaFocus) {
+                        current_focus = true;
+                        focus_index = i;
+                    }
                 }
 
                 {
                     std::scoped_lock lock(mutex_);
-                    if (fresh_semantic_caret) {
-                        last_semantic_caret_ = *fresh_semantic_caret;
+                    if (focus_index) {
+                        auto& focus = sampled[*focus_index];
+                        if (last_focus_ && core::same_poi_target(focus, *last_focus_)) focus.timestamp_qpc = last_focus_->timestamp_qpc;
+                        last_focus_ = focus;
+                    }
+                    if (semantic_caret_index) {
+                        auto& caret = sampled[*semantic_caret_index];
+                        if (last_semantic_caret_ && core::same_poi_target(caret, *last_semantic_caret_)) caret.timestamp_qpc = last_semantic_caret_->timestamp_qpc;
+                        last_semantic_caret_ = caret;
                     } else if (last_semantic_caret_) {
                         // Retain the last real semantic caret with its ORIGINAL timestamp. The
                         // core freshness policy therefore expires it naturally instead of a
@@ -240,6 +251,7 @@ private:
     mutable std::mutex mutex_;
     std::vector<core::PoiCandidate> latest_;
     std::optional<core::PoiCandidate> last_semantic_caret_;
+    std::optional<core::PoiCandidate> last_focus_;
     std::uint64_t sampled_qpc_{};
     bool current_caret_present_{};
     bool current_focus_present_{};

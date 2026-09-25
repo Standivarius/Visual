@@ -53,6 +53,32 @@ int main() {
         if (best) require(best->source == PoiSource::ExplicitUserTarget, "explicit_target", "explicit user target must remain highest priority", failures);
     }
 
+    {
+        auto prior = make(PoiKind::Caret, PoiSource::UiaTextPattern2Caret, 40'000);
+        prior.process_id = 10;
+        prior.identity = 20;
+        auto blink_sample = prior;
+        blink_sample.timestamp_qpc = 40'500;
+        require(same_poi_target(prior, blink_sample), "stationary_caret_same_target", "unchanged caret sample should not be new activity", failures);
+
+        auto moved = blink_sample;
+        moved.screen_rect.left += 8.0;
+        moved.screen_rect.right += 8.0;
+        require(!same_poi_target(prior, moved), "moved_caret_new_target", "caret geometry movement must count as new activity", failures);
+    }
+
+    {
+        auto prior = make(PoiKind::Focus, PoiSource::UiaFocus, 50'000);
+        prior.process_id = 11;
+        prior.identity = 21;
+        auto repeated = prior;
+        repeated.timestamp_qpc = 50'500;
+        require(same_poi_target(prior, repeated), "stationary_focus_same_target", "unchanged focus sample should not be new activity", failures);
+
+        auto changed = repeated;
+        changed.identity = 22;
+        require(!same_poi_target(prior, changed), "changed_focus_new_target", "focus identity change must count as new activity", failures);
+    }
     if (!failures.empty()) {
         std::cerr << "poi_arbitration_tests FAILED: " << failures.size() << " failure(s)\n";
         for (const auto& f : failures) std::cerr << "  " << f.name << ": " << f.message << "\n";
