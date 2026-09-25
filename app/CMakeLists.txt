@@ -69,6 +69,7 @@ target_link_libraries(visual_app PRIVATE
     d3dcompiler
     windowsapp
     shell32
+    advapi32
     user32
     gdi32
     ole32

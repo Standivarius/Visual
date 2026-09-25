@@ -149,20 +149,21 @@ For technician/standalone deployment, the UI should show only meaningful states 
 
 No chat interface is part of the installation product.
 
-## Current prototype
+## Current surrogate implementation
 
-`app/packaging/doxa-setup/` contains a deliberately small decision simulator. It demonstrates:
+The current two-monitor Visual application is now the surrogate Doxa software platform.
 
-- deterministic handling of normal/known states;
-- enterprise-policy escalation;
-- offline-safe failure behavior;
-- a Muse Contributor call only for an ambiguous failure;
-- an AI allowlist containing only diagnostic/escalation actions.
+- `visual_app.exe --health-check` proves that the real interactive WGC/D3D capture-and-present path can start and render successfully within a bounded timeout;
+- `app/packaging/doxa-setup/run-surrogate.ps1` collects live diagnostics, applies the deterministic setup policy and optionally invokes Muse for ambiguous exceptions;
+- `app/packaging/doxa-setup/smoke.ps1` exercises the live health path, missing-display simulation, offline bundle fallback and optional Muse -> approved diagnostic -> local follow-up loop;
+- future Doxa hardware facts are injected as state fields rather than hard-coded into the renderer;
+- application-driven updates can be disabled by enterprise policy without changing the Velopack transport;
+- `app/packaging/package.ps1 -EnterpriseMsi` continues to produce the per-machine MSI, so no second WiX installer project is needed.
 
-`app/packaging/package.ps1 -EnterpriseMsi` now asks the existing pinned Velopack toolchain to create a per-machine MSI. This is the preferred enterprise package foundation; no separate WiX project was added.
+The production Doxa hardware adapter is intentionally not implemented yet. When the SM770-based unit arrives, the surrogate hardware fields can be replaced by real USB/controller, driver/firmware and display observations while retaining the same lifecycle and planner contract.
 
 ## Next implementation milestone
 
 Do not add more orchestration frameworks yet.
 
-The next useful code milestone is a small signed `DoxaSetup`/preflight executable that consumes the real Doxa baseline once production hardware identifiers and approved driver packages are known. Until then, use the simulation contract to validate enterprise scenarios and the Dify/Muse planner behavior.
+Before the physical Doxa arrives, continue using this surrogate for packaging, version/update policy, enterprise deployment, diagnostics, support and magnifier regression testing. Once the unit is present, implement the smallest real hardware adapter needed to replace the simulated controller/display fields and qualify the exact Silicon Motion stack.

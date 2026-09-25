@@ -58,6 +58,7 @@ std::atomic<int> g_zoom{2};
 std::atomic<int> g_previousMagnifiedZoom{2};
 std::atomic<bool> g_trackingEnabled{true};
 std::atomic<bool> g_captureFailed{false};
+std::atomic<bool> g_healthCheckMode{false};
 
 struct MonitorRecord {
     HMONITOR handle{};
@@ -72,6 +73,8 @@ struct Options {
     int destIndex{-1};
     int zoom{2};
     bool forceSingleMonitor{false};
+    bool healthCheck{false};
+    int healthTimeoutMs{7000};
     std::filesystem::path logPath{L"visual_app_telemetry.csv"};
 };
 
@@ -142,9 +145,12 @@ Options parse_options() {
         else if (arg == L"--zoom") options.zoom = std::stoi(next_value());
         else if (arg == L"--log") options.logPath = next_value();
         else if (arg == L"--single-monitor") options.forceSingleMonitor = true;
+        else if (arg == L"--health-check") options.healthCheck = true;
+        else if (arg == L"--health-timeout-ms") options.healthTimeoutMs = std::stoi(next_value());
     }
     LocalFree(argv);
     if (options.zoom != 1 && options.zoom != 2 && options.zoom != 4) options.zoom = 2;
+    options.healthTimeoutMs = std::clamp(options.healthTimeoutMs, 1000, 30000);
     return options;
 }
 
@@ -505,6 +511,10 @@ public:
         item_ = nullptr;
     }
 
+    [[nodiscard]] bool source_frame_observed() const noexcept { return firstSourceFrameObserved_.load(std::memory_order_relaxed); }
+    [[nodiscard]] bool render_observed() const noexcept { return firstRenderObserved_.load(std::memory_order_relaxed); }
+    [[nodiscard]] bool health_ready() const noexcept { return source_frame_observed() && render_observed(); }
+
     ~CaptureRunner() { stop(); }
 
 private:
@@ -705,7 +715,9 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
         break;
     case kCaptureErrorMessage:
         g_shutdownReason.store(static_cast<int>(ShutdownReason::CaptureFailure), std::memory_order_relaxed);
-        MessageBoxW(hwnd, L"Capture/render loop failed. See visual_app_telemetry.csv.", L"Visual", MB_OK | MB_ICONERROR);
+        if (!g_healthCheckMode.load(std::memory_order_relaxed)) {
+            MessageBoxW(hwnd, L"Capture/render loop failed. See visual_app_telemetry.csv.", L"Visual", MB_OK | MB_ICONERROR);
+        }
         DestroyWindow(hwnd);
         return 0;
     case kCaptureSourceClosedMessage:
@@ -755,7 +767,7 @@ WindowPlacement create_detail_window(HINSTANCE instance, const MonitorRecord& de
         exStyle |= WS_EX_TOPMOST;
     }
 
-    HWND hwnd = CreateWindowExW(exStyle, kWindowClass, L"Visual — Detail", style, x, y, width, height,
+    HWND hwnd = CreateWindowExW(exStyle, kWindowClass, L"Visual Ã¢â‚¬â€ Detail", style, x, y, width, height,
                                 nullptr, nullptr, instance, nullptr);
     if (!hwnd) winrt::throw_last_error();
     register_hotkeys(hwnd);
@@ -792,12 +804,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         winrt::init_apartment(winrt::apartment_type::multi_threaded);
         const auto options = parse_options();
+        g_healthCheckMode.store(options.healthCheck, std::memory_order_relaxed);
         g_zoom.store(options.zoom, std::memory_order_relaxed);
         if (options.zoom > 1) g_previousMagnifiedZoom.store(options.zoom, std::memory_order_relaxed);
 
         const auto monitors = enumerate_monitors();
         if (monitors.empty()) {
-            MessageBoxW(nullptr, L"No active display was detected.", L"Visual", MB_OK | MB_ICONERROR);
+            if (!options.healthCheck) MessageBoxW(nullptr, L"No active display was detected.", L"Visual", MB_OK | MB_ICONERROR);
             return 2;
         }
 
@@ -807,7 +820,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(monitors.size())
             || destIndex < 0 || destIndex >= static_cast<int>(monitors.size())
             || (!singleMonitor && sourceIndex == destIndex)) {
-            MessageBoxW(nullptr, L"Invalid source/destination monitor selection.", L"Visual", MB_OK | MB_ICONERROR);
+            if (!options.healthCheck) MessageBoxW(nullptr, L"Invalid source/destination monitor selection.", L"Visual", MB_OK | MB_ICONERROR);
             return 3;
         }
 
@@ -819,6 +832,37 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
 
         CaptureRunner capture(renderer, telemetry, monitors[sourceIndex], window.hwnd);
         capture.start();
+        if (options.healthCheck) {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(options.healthTimeoutMs);
+            while (std::chrono::steady_clock::now() < deadline) {
+                MSG healthMsg{};
+                while (PeekMessageW(&healthMsg, nullptr, 0, 0, PM_REMOVE)) {
+                    if (healthMsg.message != WM_QUIT) {
+                        TranslateMessage(&healthMsg);
+                        DispatchMessageW(&healthMsg);
+                    }
+                }
+                if (capture.health_ready()) {
+                    telemetry.event("health_check_pass");
+                    capture.stop();
+                    if (IsWindow(window.hwnd)) DestroyWindow(window.hwnd);
+                    return 0;
+                }
+                const auto shutdown = static_cast<ShutdownReason>(g_shutdownReason.load(std::memory_order_relaxed));
+                if (shutdown == ShutdownReason::CaptureFailure || g_captureFailed.load(std::memory_order_relaxed)) {
+                    capture.stop();
+                    return 10;
+                }
+                if (shutdown == ShutdownReason::CaptureSourceClosed) { capture.stop(); return 11; }
+                if (shutdown == ShutdownReason::DisplayTopologyChanged) { capture.stop(); return 12; }
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+            telemetry.event("health_check_timeout");
+            capture.stop();
+            if (IsWindow(window.hwnd)) DestroyWindow(window.hwnd);
+            return 30;
+        }
+
         MSG msg{};
         while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
             TranslateMessage(&msg);
@@ -842,15 +886,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         }
     } catch (const winrt::hresult_error& e) {
         const std::wstring text = L"HRESULT failure: " + format_hr(e.code()) + L"\n" + std::wstring(e.message().c_str());
-        MessageBoxW(nullptr, text.c_str(), L"Visual", MB_OK | MB_ICONERROR);
+        if (!g_healthCheckMode.load(std::memory_order_relaxed)) MessageBoxW(nullptr, text.c_str(), L"Visual", MB_OK | MB_ICONERROR);
         return 20;
     } catch (const std::exception& e) {
         const std::string s = e.what();
         const std::wstring message(s.begin(), s.end());
-        MessageBoxW(nullptr, message.c_str(), L"Visual", MB_OK | MB_ICONERROR);
+        if (!g_healthCheckMode.load(std::memory_order_relaxed)) MessageBoxW(nullptr, message.c_str(), L"Visual", MB_OK | MB_ICONERROR);
         return 21;
     } catch (...) {
-        MessageBoxW(nullptr, L"Unknown fatal error.", L"Visual", MB_OK | MB_ICONERROR);
+        if (!g_healthCheckMode.load(std::memory_order_relaxed)) MessageBoxW(nullptr, L"Unknown fatal error.", L"Visual", MB_OK | MB_ICONERROR);
         return 22;
     }
 }

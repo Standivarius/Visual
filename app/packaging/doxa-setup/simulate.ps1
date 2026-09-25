@@ -37,8 +37,12 @@ function Resolve-Local($s){
     if($s.pending_reboot){
         return New-Decision 'reboot_required' 'return_3010' 'A reboot is already required before setup can safely continue.'
     }
-    if([int]$s.active_displays -lt 2){
-        return New-Decision 'waiting_for_display' 'wait_for_display' 'The Doxa baseline expects two active displays and Windows currently reports fewer.'
+    $expectedDisplays=2
+    if($s.PSObject.Properties.Name -contains 'expected_display_count'){
+        $expectedDisplays=[Math]::Max(1,[int]$s.expected_display_count)
+    }
+    if([int]$s.active_displays -lt $expectedDisplays){
+        return New-Decision 'waiting_for_display' 'wait_for_display' "The Doxa baseline expects $expectedDisplays active displays and Windows currently reports fewer."
     }
     if($s.driver_state -in @('missing','outdated')){
         return New-Decision 'local_remediation' 'install_approved_driver' 'The Doxa hardware is present but its approved signed driver package is not at the required baseline.'

@@ -68,12 +68,37 @@ void append_update_log(const std::filesystem::path& path, const std::string& mes
     stream << timestamp << ' ' << message << '\n';
     stream.flush();
 }
+bool equals_ci(const std::wstring& left, const wchar_t* right) noexcept {
+    return _wcsicmp(left.c_str(), right) == 0;
+}
+
+bool updates_managed_by_it() noexcept {
+    wchar_t envValue[64]{};
+    const DWORD envLength = GetEnvironmentVariableW(L"VISUAL_UPDATE_MODE", envValue, ARRAYSIZE(envValue));
+    if (envLength > 0 && envLength < ARRAYSIZE(envValue) && equals_ci(envValue, L"it-managed")) return true;
+
+    wchar_t registryValue[64]{};
+    DWORD bytes = sizeof(registryValue);
+    const LSTATUS status = RegGetValueW(
+        HKEY_LOCAL_MACHINE,
+        L"SOFTWARE\\Standivarius\\Visual",
+        L"UpdateMode",
+        RRF_RT_REG_SZ,
+        nullptr,
+        registryValue,
+        &bytes);
+    return status == ERROR_SUCCESS && equals_ci(registryValue, L"ITManaged");
+}
 
 int run_update_maintenance(const MaintenanceOptions& options) noexcept {
     std::filesystem::path logPath;
     try {
         logPath = update_log_path();
         append_update_log(logPath, options.applyUpdate ? "update_now_start" : "update_check_start");
+        if (updates_managed_by_it()) {
+            append_update_log(logPath, "result=disabled_by_policy update_mode=it_managed");
+            return 43;
+        }
 
         auto source = std::make_unique<Velopack::GithubSource>(kUpdateRepository, "", true);
         Velopack::UpdateManager manager(std::move(source));

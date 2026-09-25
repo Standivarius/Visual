@@ -113,6 +113,24 @@ On MARIUS-DELL:
 
 The earlier alpha.2 candidate failure was traced to shipping the SDK archive filename (`velopack_libc_win_x64_msvc.dll`) instead of the DLL basename encoded by the import library (`velopack_libc.dll`). That defect is corrected and covered by package/install verification.
 
+## Interactive graphics health check
+
+The installed application can exercise its real WGC/D3D path without entering normal long-running magnifier mode:
+
+```powershell
+visual_app.exe --health-check --health-timeout-ms 7000 --log health.csv
+```
+
+Exit `0` means at least one source frame and one successful rendered/presented frame were observed. Exit `30` is the bounded health-check timeout. Existing capture/source/topology failure codes remain unchanged. This is intended for an interactive user-session validation after machine-level deployment; it is not a substitute for SYSTEM-context package/driver checks.
+
+## IT-managed update policy
+
+Enterprise IT can disable application-driven update checks/apply while retaining the same package:
+
+- set machine registry value `HKLM\SOFTWARE\Standivarius\Visual\UpdateMode` to `ITManaged`; or
+- for deployment/test automation, set environment variable `VISUAL_UPDATE_MODE=it-managed`.
+
+When the policy is active, `--update-check` and `--update-now` do not create a Velopack update source or contact the release service. They log `result=disabled_by_policy update_mode=it_managed` and exit `43`. Normal application launch is unaffected.
 ## Explicit update maintenance
 
 Installed engineering commands:
