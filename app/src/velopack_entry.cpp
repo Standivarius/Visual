@@ -56,14 +56,14 @@ std::filesystem::path update_log_path() {
     const DWORD length = GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, static_cast<DWORD>(std::size(localAppData)));
     std::filesystem::path root;
     if (length > 0 && length < std::size(localAppData)) {
-        root = std::filesystem::path(localAppData) / L"Standivarius.Visual";
+        root = std::filesystem::path(localAppData) / L"Standivarius" / L"Visual" / L"logs";
     } else {
         wchar_t tempPath[MAX_PATH]{};
         const DWORD tempLength = GetTempPathW(ARRAYSIZE(tempPath), tempPath);
         if (tempLength == 0 || tempLength >= ARRAYSIZE(tempPath)) {
             throw std::runtime_error("Unable to resolve a directory for the Visual update log");
         }
-        root = std::filesystem::path(tempPath) / L"Standivarius.Visual";
+        root = std::filesystem::path(tempPath) / L"Standivarius" / L"Visual" / L"logs";
     }
     std::filesystem::create_directories(root);
     return root / L"visual_update.log";
@@ -152,12 +152,24 @@ int run_update_maintenance(const MaintenanceOptions& options) noexcept {
     }
 }
 
+
+void velopack_after_update(void*, const char* appVersion) noexcept {
+    visual::setup::migrate_legacy_state_after_update(appVersion);
+}
+
+void velopack_before_uninstall(void*, const char* appVersion) noexcept {
+    visual::setup::remove_persistent_state_before_uninstall(appVersion);
+}
+
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previousInstance, PWSTR commandLine, int showCommand) {
     // This must remain the first meaningful Visual statement. During Velopack's
     // install/update/uninstall fast hooks Run() may terminate the process here.
-    Velopack::VelopackApp::Build().Run();
+    Velopack::VelopackApp::Build()
+        .OnAfterUpdate(&velopack_after_update)
+        .OnBeforeUninstall(&velopack_before_uninstall)
+        .Run();
 
     const auto maintenance = parse_maintenance_options();
     if (maintenance.applyUpdate || maintenance.checkUpdate) {

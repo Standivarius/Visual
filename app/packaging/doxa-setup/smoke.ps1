@@ -40,7 +40,7 @@ try{
 }finally{
     if($null-eq$priorUpdateMode){Remove-Item Env:VISUAL_UPDATE_MODE -ErrorAction SilentlyContinue}else{$env:VISUAL_UPDATE_MODE=$priorUpdateMode}
 }
-$results+=[pscustomobject]@{case='it_managed_update_policy';expected='exit_43_no_update_contact';actual="exit_$($policyProcess.ExitCode)";pass=($policyProcess.ExitCode-eq43);detail=(Join-Path $env:LOCALAPPDATA 'Standivarius.Visual\visual_update.log')}
+$results+=[pscustomobject]@{case='it_managed_update_policy';expected='exit_43_no_update_contact';actual="exit_$($policyProcess.ExitCode)";pass=($policyProcess.ExitCode-eq43);detail=(Join-Path $env:LOCALAPPDATA 'Standivarius\Visual\logs\visual_update.log')}
 
 $stamp=Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $summaryPath=Join-Path $outRoot "${stamp}__summary.json"

@@ -45,14 +45,32 @@ std::filesystem::path module_path() {
     return std::filesystem::path(buffer);
 }
 
-std::filesystem::path setup_root() {
+std::filesystem::path local_app_data_root() {
     wchar_t localAppData[32768]{};
     const DWORD length = GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, static_cast<DWORD>(std::size(localAppData)));
     if (length == 0 || length >= std::size(localAppData)) return {};
-    auto root = std::filesystem::path(localAppData) / L"Standivarius.Visual" / L"doxa-setup";
+    return std::filesystem::path(localAppData);
+}
+
+std::filesystem::path persistent_product_root() {
+    const auto local = local_app_data_root();
+    if (local.empty()) return {};
+    return local / L"Standivarius" / L"Visual";
+}
+
+std::filesystem::path setup_root() {
+    auto root = persistent_product_root();
+    if (root.empty()) return {};
+    root /= L"doxa-setup";
     std::error_code ec;
     std::filesystem::create_directories(root, ec);
     return ec ? std::filesystem::path{} : root;
+}
+
+std::filesystem::path legacy_setup_root() {
+    const auto local = local_app_data_root();
+    if (local.empty()) return {};
+    return local / L"Standivarius.Visual" / L"doxa-setup";
 }
 
 bool installed_copy() {
@@ -382,6 +400,50 @@ int complete_setup(const std::string& detail) {
 
 } // namespace
 
+void migrate_legacy_state_after_update(const char* appVersion) noexcept {
+    try {
+        const auto root = setup_root();
+        if (root.empty()) return;
+        if (std::filesystem::exists(root / L"complete-v1.txt")) {
+            append_log(std::string("update_hook_persistent_marker_present version=") + (appVersion ? appVersion : ""));
+            return;
+        }
+
+        const auto legacy = legacy_setup_root();
+        if (legacy.empty() || !std::filesystem::exists(legacy / L"complete-v1.txt")) {
+            append_log(std::string("update_hook_legacy_marker_missing version=") + (appVersion ? appVersion : ""));
+            return;
+        }
+
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(legacy, ec)) {
+            if (ec) break;
+            if (!entry.is_regular_file(ec) || ec) continue;
+            std::filesystem::copy_file(entry.path(), root / entry.path().filename(), std::filesystem::copy_options::overwrite_existing, ec);
+            if (ec) break;
+        }
+        if (ec || !std::filesystem::exists(root / L"complete-v1.txt")) {
+            append_log(std::string("update_hook_legacy_migration_failed version=") + (appVersion ? appVersion : ""));
+            return;
+        }
+        append_log(std::string("update_hook_legacy_state_migrated version=") + (appVersion ? appVersion : ""));
+    } catch (...) {
+        // Velopack lifecycle hooks must never destabilize install/update operations.
+    }
+}
+
+void remove_persistent_state_before_uninstall(const char* appVersion) noexcept {
+    try {
+        const auto root = persistent_product_root();
+        if (root.empty()) return;
+        append_log(std::string("uninstall_hook_remove_persistent_state version=") + (appVersion ? appVersion : ""));
+        std::error_code ec;
+        std::filesystem::remove_all(root, ec);
+    } catch (...) {
+        // Best-effort cleanup only; never make uninstall fail because state cleanup failed.
+    }
+}
+
 int run_first_setup_if_needed(bool force) {
     if (!force && !installed_copy()) return 0;
     if (!force && marker_exists()) return 0;
@@ -477,7 +539,7 @@ int run_first_setup_if_needed(bool force) {
             return 52;
         }
         if (action == "collect_support_bundle") {
-            show_message(L"Doxa cloud diagnostics could not resolve the installation automatically.\n\nDiagnostic evidence has been saved under Local AppData\\Standivarius.Visual\\doxa-setup.", MB_OK | MB_ICONWARNING);
+            show_message(L"Doxa cloud diagnostics could not resolve the installation automatically.\n\nDiagnostic evidence has been saved under Local AppData\\Standivarius\\Visual\\doxa-setup.", MB_OK | MB_ICONWARNING);
             return 53;
         }
         if (action == "escalate_it") {

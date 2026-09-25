@@ -4,7 +4,8 @@ Set-StrictMode -Version Latest
 
 $owned=@(
     (Join-Path $env:LOCALAPPDATA 'Doxa\Pilot'),
-    (Join-Path $env:LOCALAPPDATA 'Standivarius.Visual')
+    (Join-Path $env:LOCALAPPDATA 'Standivarius.Visual'),
+    (Join-Path $env:LOCALAPPDATA 'Standivarius\Visual')
 )
 $uninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Standivarius.Visual'
 $appPolicyKey='HKCU:\Software\Standivarius\Visual'

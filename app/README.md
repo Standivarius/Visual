@@ -146,7 +146,7 @@ visual_app.exe --update-now
 
 `--update-now` checks, downloads and schedules an available update for application after the process exits, without an automatic restart. This path is now proven end to end: installed public alpha.2 detected public alpha.3, downloaded it, scheduled apply, and the installed ProductVersion changed to `0.1.0-alpha.3`. The updated alpha.3 then reported `result=no_update` and launched/exited normally through `Ctrl+Alt+Q`.
 
-Maintenance diagnostics are appended to `%LOCALAPPDATA%\Standivarius.Visual\visual_update.log`.
+Maintenance diagnostics are appended to `%LOCALAPPDATA%\Standivarius\Visual\logs\visual_update.log`.
 
 ## Packaging and releases
 

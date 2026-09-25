@@ -38,7 +38,7 @@ Engineering commands in installed alpha.2:
 - `visual_app.exe --update-check` - check public GitHub prereleases without starting the magnifier UI;
 - `visual_app.exe --update-now` - check, download and schedule an available update to apply after Visual exits; no automatic restart is requested yet.
 
-Maintenance diagnostics are appended to `%LOCALAPPDATA%\Standivarius.Visual\visual_update.log`.
+Maintenance diagnostics are appended to `%LOCALAPPDATA%\Standivarius\Visual\logs\visual_update.log`.
 
 Current proof boundary:
 

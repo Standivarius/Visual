@@ -90,7 +90,7 @@ try{
     # At the time alpha.2 is prepared the public feed contains only alpha.1, so a healthy
     # alpha.2 candidate should normally report no update. Exit 10 is also accepted so this
     # verification remains useful later when a newer prerelease exists.
-    $updateLog=Join-Path $installRoot 'visual_update.log'
+    $updateLog=Join-Path $env:LOCALAPPDATA 'Standivarius\Visual\logs\visual_update.log'
     Remove-Item $updateLog -Force -ErrorAction SilentlyContinue
     Log 'installed_update_check_start'
     $checkProcess=Start-Process -FilePath $installedExe -ArgumentList @('--update-check') -PassThru
