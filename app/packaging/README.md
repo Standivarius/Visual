@@ -24,6 +24,11 @@ The release path intentionally pins both halves of Velopack integration:
 
 `app/packaging/get-dotnet-sdk.ps1` can acquire the pinned .NET SDK into ignored `tools/dotnet/8.0.425/` when the exact SDK is not already installed. Packaging selects the pinned version rather than accepting an arbitrary global SDK.
 
+## Release reproducibility and supply-chain controls
+
+See `REPRODUCIBILITY.md` for the locked dependency manifest, verified offline caches, observed MSBuild input audit, CycloneDX SBOM/provenance output, and detached-worktree clean-room release procedure.
+
+For a release candidate, prefer `package.ps1 -OfflineDependencies` or `clean-room-release.ps1` rather than relying on globally installed SDK/tool caches.
 ## Native lifecycle integration
 
 `app/src/velopack_entry.cpp` owns the real application entry point. It executes `Velopack::VelopackApp::Build().Run()` before normal Visual initialization, handles explicit update-maintenance commands, then delegates normal launches to `VisualProductMain` in `main.cpp`.
@@ -171,12 +176,13 @@ The remaining update work is UX/policy, not transport plumbing.
 The workflow:
 
 1. validates the tag/version;
-2. installs exact .NET SDK `8.0.425`;
-3. builds/tests with the tag version embedded;
-4. restores pinned `vpk 1.2.0`;
-5. downloads prior alpha release metadata when available;
-6. packages with normal Velopack validation;
-7. publishes a GitHub prerelease.
+2. downloads and hash-verifies the locked release inputs;
+3. restores `vpk 1.2.0` from the verified local NuGet cache only;
+4. builds/tests with offline dependency mode and the tag version embedded;
+5. optionally downloads prior public alpha metadata for release-feed/delta continuity;
+6. packages with offline dependency mode, the MSBuild input audit, SBOM and provenance generation;
+7. validates that provenance matches the tagged commit and the input audit is clean;
+8. publishes the GitHub prerelease.
 
 Do not rewrite an existing alpha tag. `v0.1.0-alpha.1` remains immutable; alpha.2 is a new tag/release.
 

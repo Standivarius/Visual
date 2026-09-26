@@ -16,6 +16,12 @@ jobs:
       REPO_URL: https://github.com/Standivarius/Visual
       RELEASE_TAG: ${{ github.ref_name }}
       TARGET_COMMIT: ${{ github.sha }}
+      DOTNET_CLI_HOME: ${{ github.workspace }}\tools\release-cache\dotnet-home
+      NUGET_PACKAGES: ${{ github.workspace }}\tools\release-cache\packages
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+      DOTNET_NOLOGO: "1"
+      DOXA_CLOUD_CLIENT_TOKEN: ${{ secrets.DOXA_CLOUD_CLIENT_TOKEN }}
 
     steps:
       - name: Checkout
@@ -36,37 +42,55 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Visual alpha version: $version"
 
-      - name: Set up .NET SDK for pinned Velopack tool
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.425"
+      - name: Prepare and verify pinned release dependencies
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DOXA_CLOUD_CLIENT_TOKEN)) { throw "GitHub secret DOXA_CLOUD_CLIENT_TOKEN is required for a cloud-enabled Visual release" }
+          $state = .\app\packaging\ensure-release-dependencies.ps1
+          $dotnet = .\app\packaging\get-dotnet-sdk.ps1 -Version 8.0.425 -Offline
+          & $dotnet tool restore --configfile $state.nuget_config
+          if ($LASTEXITCODE -ne 0) { throw "Pinned local vpk restore failed: $LASTEXITCODE" }
 
-      - name: Build and test Visual
+      - name: Build and test Visual with offline dependency mode
         shell: pwsh
         env:
           VISUAL_RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: .\app\build.ps1 -Configuration Release -Version $env:VISUAL_RELEASE_VERSION
-
-      - name: Restore pinned Velopack CLI
-        shell: pwsh
-        run: dotnet tool restore
+        run: .\app\build.ps1 -Configuration Release -Version $env:VISUAL_RELEASE_VERSION -OfflineDependencies
 
       - name: Download previous public alpha package metadata when available
         shell: pwsh
         continue-on-error: true
         run: |
           New-Item -ItemType Directory -Force -Path $env:RELEASE_DIR | Out-Null
-          dotnet tool run vpk download github `
+          $dotnet = "$env:GITHUB_WORKSPACE\tools\dotnet\8.0.425\dotnet.exe"
+          & $dotnet tool run vpk -- --skip-updates true download github `
             --repoUrl $env:REPO_URL `
             --channel alpha `
             --pre true `
             --outputDir $env:RELEASE_DIR
 
-      - name: Package Visual alpha
+      - name: Package Visual alpha from verified local dependencies
         shell: pwsh
         env:
           VISUAL_RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: .\app\packaging\package.ps1 -Version $env:VISUAL_RELEASE_VERSION -Configuration Release -OutputDir $env:RELEASE_DIR -SkipBuild
+        run: .\app\packaging\package.ps1 -Version $env:VISUAL_RELEASE_VERSION -Configuration Release -OutputDir $env:RELEASE_DIR -SkipBuild -OfflineDependencies
+
+      - name: Validate release evidence
+        shell: pwsh
+        env:
+          VISUAL_RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $provPath = Join-Path $env:RELEASE_DIR "Standivarius.Visual-$env:VISUAL_RELEASE_VERSION.provenance.json"
+          $sbomPath = Join-Path $env:RELEASE_DIR "Standivarius.Visual-$env:VISUAL_RELEASE_VERSION.sbom.cdx.json"
+          $inputPath = Join-Path $env:RELEASE_DIR "Standivarius.Visual-$env:VISUAL_RELEASE_VERSION.build-inputs.json"
+          foreach ($path in @($provPath,$sbomPath,$inputPath)) {
+            if (-not (Test-Path $path -PathType Leaf)) { throw "Release evidence missing: $path" }
+          }
+          $prov = Get-Content -Raw $provPath | ConvertFrom-Json
+          if ($prov.source.git_commit -ne $env:TARGET_COMMIT) { throw "Provenance commit mismatch" }
+          if ($prov.source.tracked_worktree_dirty) { throw "Release provenance reports a dirty tracked worktree" }
+          $inputs = Get-Content -Raw $inputPath | ConvertFrom-Json
+          if (@($inputs.unexpected).Count -ne 0) { throw "Release build-input audit found unexpected inputs" }
 
       - name: Publish GitHub prerelease
         shell: pwsh
@@ -74,7 +98,8 @@ jobs:
           VISUAL_RELEASE_VERSION: ${{ steps.version.outputs.version }}
           VPK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dotnet tool run vpk upload github `
+          $dotnet = "$env:GITHUB_WORKSPACE\tools\dotnet\8.0.425\dotnet.exe"
+          & $dotnet tool run vpk -- --skip-updates true upload github `
             --repoUrl $env:REPO_URL `
             --token $env:VPK_TOKEN `
             --channel alpha `

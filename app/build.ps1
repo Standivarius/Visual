@@ -1,16 +1,10 @@
 param(
     [ValidateSet('Debug','Release','RelWithDebInfo','MinSizeRel')][string]$Configuration='Release',
-    [string]$Version=''
+    [string]$Version='',
+    [switch]$OfflineDependencies
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $MyInvocation.MyCommand.Path
-
-# The lab cloud client token is persisted only in the current Windows user
-# environment. Copy it into this build process without printing or committing it.
-if([string]::IsNullOrWhiteSpace($env:DOXA_CLOUD_CLIENT_TOKEN)){
-    $persistedDoxaToken=[Environment]::GetEnvironmentVariable('DOXA_CLOUD_CLIENT_TOKEN','User')
-    if(-not[string]::IsNullOrWhiteSpace($persistedDoxaToken)){$env:DOXA_CLOUD_CLIENT_TOKEN=$persistedDoxaToken}
-}
 
 $cmakeCommand=Get-Command cmake.exe -ErrorAction SilentlyContinue
 if($cmakeCommand){
@@ -22,10 +16,11 @@ if(-not(Test-Path $cmake)){throw "CMake not found: $cmake"}
 
 # The native Velopack SDK is pinned independently from the .NET vpk packaging tool.
 # It is downloaded once into an ignored repository-local cache and reused by later builds.
-$velopackVersion='1.2.0'
+$dependencyLock=Get-Content -Raw (Join-Path $root 'packaging\release-dependencies.lock.json') | ConvertFrom-Json
+$velopackVersion=[string](@($dependencyLock.dependencies | Where-Object id -eq 'velopack-native-sdk')[0].version)
 $velopackRoot=Join-Path $root "third_party\velopack\$velopackVersion"
 $velopackSdkScript=Join-Path $root 'packaging\get-velopack-sdk.ps1'
-& $velopackSdkScript -Version $velopackVersion -DestinationRoot $velopackRoot | Out-Null
+& $velopackSdkScript -Version $velopackVersion -DestinationRoot $velopackRoot -Offline:$OfflineDependencies | Out-Null
 if(-not(Test-Path (Join-Path $velopackRoot 'include\Velopack.hpp'))){
     throw "Velopack SDK is incomplete: $velopackRoot"
 }

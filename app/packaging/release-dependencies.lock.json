@@ -1,0 +1,38 @@
+﻿{
+  "schema_version": 1,
+  "reproducibility_level": "dependency-pinned-host-toolchain-recorded",
+  "dependencies": [
+    {
+      "id": "velopack-native-sdk",
+      "kind": "archive",
+      "version": "1.2.0",
+      "url": "https://github.com/velopack/velopack/releases/download/1.2.0/velopack_libc_1.2.0.zip",
+      "cache_path": "app/third_party/velopack/.downloads/velopack_libc_1.2.0.zip",
+      "hash": { "algorithm": "SHA256", "value": "547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835" }
+    },
+    {
+      "id": "dotnet-sdk",
+      "kind": "archive",
+      "version": "8.0.425",
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.425/dotnet-sdk-8.0.425-win-x64.zip",
+      "cache_path": "tools/dotnet/.downloads/dotnet-sdk-8.0.425-win-x64.zip",
+      "hash": { "algorithm": "SHA512", "value": "f0b6f15bf6f1a0507205c0cb102ab99e1dee875c4682c8ed94665be1d580186a06b21455e83b3a01a0ff7f4cd887b67420f2e2fe09ed985534a4cea488ae1af9" }
+    },
+    {
+      "id": "velopack-cli",
+      "kind": "nuget-tool",
+      "package_id": "vpk",
+      "version": "1.2.0",
+      "url": "https://api.nuget.org/v3-flatcontainer/vpk/1.2.0/vpk.1.2.0.nupkg",
+      "cache_path": "tools/release-cache/nuget/vpk.1.2.0.nupkg",
+      "hash": { "algorithm": "SHA256", "value": "c3a2d80cef556dcd0dbd27b3c0363c642d79842be6b6955de116d30bfe2f399f" }
+    }
+  ],
+  "host_requirements": {
+    "os": "Windows",
+    "architecture": "x64",
+    "visual_studio": "Visual Studio 2022 Build Tools",
+    "cmake_minimum": "3.20",
+    "windows_sdk_minimum": "10.0.26100.0"
+  }
+}

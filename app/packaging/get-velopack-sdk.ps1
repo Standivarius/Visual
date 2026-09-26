@@ -1,6 +1,7 @@
 param(
     [string]$Version='1.2.0',
-    [string]$DestinationRoot=''
+    [string]$DestinationRoot='',
+    [switch]$Offline
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -9,13 +10,15 @@ $appRoot=Split-Path -Parent $PSScriptRoot
 if(-not$DestinationRoot){$DestinationRoot=Join-Path $appRoot "third_party\velopack\$Version"}
 $DestinationRoot=[IO.Path]::GetFullPath($DestinationRoot)
 
-$assetName="velopack_libc_${Version}.zip"
-$assetUrl="https://github.com/velopack/velopack/releases/download/$Version/$assetName"
-$expectedSha256ByVersion=@{
-    '1.2.0'='547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835'
-}
-if(-not$expectedSha256ByVersion.ContainsKey($Version)){throw "No pinned SHA-256 is registered for Velopack SDK $Version"}
-$expectedSha256=$expectedSha256ByVersion[$Version]
+$lockPath=Join-Path $PSScriptRoot 'release-dependencies.lock.json'
+$lock=Get-Content -Raw $lockPath | ConvertFrom-Json
+$dependency=@($lock.dependencies | Where-Object {$_.id-eq'velopack-native-sdk' -and $_.version-eq$Version})
+if($dependency.Count-ne1){throw "No locked Velopack native SDK dependency is registered for version $Version"}
+$dependency=$dependency[0]
+$assetName=[IO.Path]::GetFileName([string]$dependency.cache_path)
+$assetUrl=[string]$dependency.url
+if($dependency.hash.algorithm-ne'SHA256'){throw "Velopack native SDK lock must use SHA256"}
+$expectedSha256=([string]$dependency.hash.value).ToLowerInvariant()
 
 $cacheRoot=Split-Path -Parent $DestinationRoot
 $downloadRoot=Join-Path $cacheRoot '.downloads'
@@ -59,6 +62,7 @@ Remove-Item -Recurse -Force $tempExtract -ErrorAction SilentlyContinue
 
 try{
     if(-not(Test-Path $zipPath -PathType Leaf)){
+        if($Offline){throw "Offline dependency mode: Velopack SDK archive is missing: $zipPath"}
         Write-Host "Downloading pinned Velopack C/C++ SDK $Version"
         Write-Host $assetUrl
         $oldProtocol=[Net.ServicePointManager]::SecurityProtocol
