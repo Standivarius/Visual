@@ -60,6 +60,9 @@ add_executable(visual_app WIN32
     src/velopack_entry.cpp
     src/setup_orchestrator.cpp
     src/main.cpp
+    src/settings_store.cpp
+    src/settings_window.cpp
+    src/context_overlay.cpp
     app.manifest
     ${VISUAL_GENERATED_DIR}/visual_version.rc
 )
@@ -122,6 +125,17 @@ add_executable(visual_view_return_tests tests/view_return_tests.cpp)
 target_link_libraries(visual_view_return_tests PRIVATE visual_core)
 target_compile_options(visual_view_return_tests PRIVATE /W4 /permissive- /EHsc)
 add_test(NAME view_return_tests COMMAND visual_view_return_tests)
+
+add_executable(visual_settings_model_tests tests/settings_model_tests.cpp)
+target_link_libraries(visual_settings_model_tests PRIVATE visual_core)
+target_compile_options(visual_settings_model_tests PRIVATE /W4 /permissive- /EHsc)
+add_test(NAME settings_model_tests COMMAND visual_settings_model_tests)
+
+add_executable(visual_settings_store_tests tests/settings_store_tests.cpp src/settings_store.cpp)
+target_link_libraries(visual_settings_store_tests PRIVATE visual_core shell32 ole32)
+target_compile_definitions(visual_settings_store_tests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_compile_options(visual_settings_store_tests PRIVATE /W4 /permissive- /EHsc)
+add_test(NAME settings_store_tests COMMAND visual_settings_store_tests)
 
 add_test(NAME diagnostics_json COMMAND visual_diagnostics)
 set_tests_properties(diagnostics_json PROPERTIES PASS_REGULAR_EXPRESSION "\\\"schema_version\\\": \\\"1\\\"")

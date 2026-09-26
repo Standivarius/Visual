@@ -1,3 +1,9 @@
+# Unreleased
+
+Visual now has the first user-facing low-vision workspace layer on top of the proven capture/tracking engine. It adds 1.5x and 3x zoom, an accessible native settings window, persisted Context/Detail/Reference display roles, independent pointer/caret/focus follow and marker controls, a capture-excluded Context-screen Detail View rectangle, and Normal/High contrast/Inverted/Grayscale Detail appearance modes. Monitor-role changes apply on the next Visual start; the other settings apply live.
+
+The installer/update engine remains separate from these Visual workspace features.
+
 # Visual 0.1.0-alpha.6
 
 Visual 0.1.0-alpha.6 fixes pointer-versus-caret/focus arbitration discovered during the ASUS two-monitor test.

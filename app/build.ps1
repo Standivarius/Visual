@@ -5,6 +5,13 @@ param(
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $MyInvocation.MyCommand.Path
+$versionFile=Join-Path $root 'version.cmake'
+if(-not$Version){
+    $versionText=Get-Content -Raw $versionFile
+    $versionMatch=[regex]::Match($versionText,'set\(VISUAL_DEFAULT_VERSION\s+"([^"]+)"\)')
+    if(-not$versionMatch.Success){throw "Unable to read VISUAL_DEFAULT_VERSION from $versionFile"}
+    $Version=$versionMatch.Groups[1].Value
+}
 
 $cmakeCommand=Get-Command cmake.exe -ErrorAction SilentlyContinue
 if($cmakeCommand){
@@ -28,7 +35,7 @@ if(-not(Test-Path (Join-Path $velopackRoot 'include\Velopack.hpp'))){
 Push-Location $root
 try{
     $configureArgs=@('-S','.','-B','build','-G','Visual Studio 17 2022','-A','x64',"-DVELOPACK_ROOT=$velopackRoot")
-    if($Version){$configureArgs += "-DVISUAL_VERSION_SEMVER=$Version"}
+    $configureArgs += "-DVISUAL_VERSION_SEMVER=$Version"
     & $cmake @configureArgs
     if($LASTEXITCODE-ne0){throw "CMake configure failed: $LASTEXITCODE"}
 

@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <shellapi.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -15,6 +16,10 @@
 #include "core/locator_model.h"
 #include "core/viewport_policy.h"
 #include "core/view_controller.h"
+#include "core/settings_model.h"
+#include "settings_store.h"
+#include "settings_window.h"
+#include "context_overlay.h"
 #include "tracking/win32_evidence_provider.h"
 #include "tracking/uia_evidence_provider.h"
 
@@ -22,6 +27,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -44,6 +50,7 @@ namespace {
 constexpr wchar_t kWindowClass[] = L"VisualDetailWindow";
 constexpr UINT kCaptureErrorMessage = WM_APP + 1;
 constexpr UINT kCaptureSourceClosedMessage = WM_APP + 2;
+constexpr UINT kContextViewChangedMessage = WM_APP + 3;
 constexpr DWORD kExcludeFromCapture = 0x00000011;
 
 enum class ShutdownReason : int {
@@ -54,11 +61,33 @@ enum class ShutdownReason : int {
 };
 
 std::atomic<int> g_shutdownReason{static_cast<int>(ShutdownReason::User)};
-std::atomic<int> g_zoom{2};
-std::atomic<int> g_previousMagnifiedZoom{2};
+std::atomic<double> g_zoom{2.0};
+std::atomic<double> g_previousMagnifiedZoom{2.0};
 std::atomic<bool> g_trackingEnabled{true};
+std::atomic<bool> g_followPointer{true};
+std::atomic<bool> g_followCaret{true};
+std::atomic<bool> g_followFocus{true};
+std::atomic<bool> g_showPointerLocator{true};
+std::atomic<bool> g_showCaretLocator{true};
+std::atomic<bool> g_showFocusLocator{true};
+std::atomic<bool> g_showContextIndicator{true};
+std::atomic<bool> g_shadeContextIndicator{true};
+std::atomic<int> g_visualMode{static_cast<int>(visual::core::VisualMode::Normal)};
 std::atomic<bool> g_captureFailed{false};
 std::atomic<bool> g_healthCheckMode{false};
+std::mutex g_settingsMutex;
+visual::core::VisualSettings g_settings{};
+std::filesystem::path g_settingsPath{};
+visual::ui::SettingsWindow* g_settingsWindow{};
+visual::ui::ContextOverlay* g_contextOverlay{};
+
+struct PendingContextView {
+    visual::core::ScreenRect viewport{};
+    double zoom{1.0};
+};
+std::mutex g_contextViewMutex;
+PendingContextView g_pendingContextView{};
+std::atomic<bool> g_contextViewMessagePending{false};
 
 struct MonitorRecord {
     HMONITOR handle{};
@@ -71,7 +100,8 @@ struct MonitorRecord {
 struct Options {
     int sourceIndex{-1};
     int destIndex{-1};
-    int zoom{2};
+    double zoom{2.0};
+    bool zoomSpecified{false};
     bool forceSingleMonitor{false};
     bool healthCheck{false};
     int healthTimeoutMs{7000};
@@ -94,6 +124,8 @@ struct RenderConstants {
     float outputSize[2];
     float locatorVisible;
     float locatorKind;
+    float visualMode;
+    float padding[3];
 };
 static_assert((sizeof(RenderConstants) % 16) == 0);
 
@@ -142,16 +174,84 @@ Options parse_options() {
         };
         if (arg == L"--source") options.sourceIndex = std::stoi(next_value());
         else if (arg == L"--dest") options.destIndex = std::stoi(next_value());
-        else if (arg == L"--zoom") options.zoom = std::stoi(next_value());
+        else if (arg == L"--zoom") { options.zoom = std::stod(next_value()); options.zoomSpecified = true; }
         else if (arg == L"--log") options.logPath = next_value();
         else if (arg == L"--single-monitor") options.forceSingleMonitor = true;
         else if (arg == L"--health-check") options.healthCheck = true;
         else if (arg == L"--health-timeout-ms") options.healthTimeoutMs = std::stoi(next_value());
     }
     LocalFree(argv);
-    if (options.zoom != 1 && options.zoom != 2 && options.zoom != 4) options.zoom = 2;
+    options.zoom = visual::core::sanitize_zoom(options.zoom);
     options.healthTimeoutMs = std::clamp(options.healthTimeoutMs, 1000, 30000);
     return options;
+}
+
+visual::core::VisualSettings runtime_settings_snapshot() noexcept {
+    visual::core::VisualSettings settings{};
+    settings.zoom = g_zoom.load(std::memory_order_relaxed);
+    settings.tracking_enabled = g_trackingEnabled.load(std::memory_order_relaxed);
+    settings.follow_pointer = g_followPointer.load(std::memory_order_relaxed);
+    settings.follow_caret = g_followCaret.load(std::memory_order_relaxed);
+    settings.follow_focus = g_followFocus.load(std::memory_order_relaxed);
+    settings.show_pointer_locator = g_showPointerLocator.load(std::memory_order_relaxed);
+    settings.show_caret_locator = g_showCaretLocator.load(std::memory_order_relaxed);
+    settings.show_focus_locator = g_showFocusLocator.load(std::memory_order_relaxed);
+    settings.show_context_indicator = g_showContextIndicator.load(std::memory_order_relaxed);
+    settings.shade_context_indicator = g_shadeContextIndicator.load(std::memory_order_relaxed);
+    settings.visual_mode = visual::core::sanitize_visual_mode(g_visualMode.load(std::memory_order_relaxed));
+    return settings;
+}
+
+void apply_runtime_settings(const visual::core::VisualSettings& settings) noexcept {
+    const double zoom = visual::core::sanitize_zoom(settings.zoom);
+    g_zoom.store(zoom, std::memory_order_relaxed);
+    if (zoom > 1.0) g_previousMagnifiedZoom.store(zoom, std::memory_order_relaxed);
+    g_trackingEnabled.store(settings.tracking_enabled, std::memory_order_relaxed);
+    g_followPointer.store(settings.follow_pointer, std::memory_order_relaxed);
+    g_followCaret.store(settings.follow_caret, std::memory_order_relaxed);
+    g_followFocus.store(settings.follow_focus, std::memory_order_relaxed);
+    g_showPointerLocator.store(settings.show_pointer_locator, std::memory_order_relaxed);
+    g_showCaretLocator.store(settings.show_caret_locator, std::memory_order_relaxed);
+    g_showFocusLocator.store(settings.show_focus_locator, std::memory_order_relaxed);
+    g_showContextIndicator.store(settings.show_context_indicator, std::memory_order_relaxed);
+    g_shadeContextIndicator.store(settings.shade_context_indicator, std::memory_order_relaxed);
+    g_visualMode.store(static_cast<int>(settings.visual_mode), std::memory_order_relaxed);
+}
+
+void persist_current_settings() noexcept {
+    try {
+        visual::core::VisualSettings copy{};
+        std::filesystem::path path;
+        {
+            std::scoped_lock lock(g_settingsMutex);
+            copy = g_settings;
+            path = g_settingsPath;
+        }
+        if (!path.empty()) (void)visual::settings::save_settings(path, copy);
+    } catch (...) {}
+}
+
+void adopt_settings(const visual::core::VisualSettings& settings, bool persist) noexcept {
+    {
+        std::scoped_lock lock(g_settingsMutex);
+        g_settings = settings;
+        g_settings.zoom = visual::core::sanitize_zoom(g_settings.zoom);
+    }
+    apply_runtime_settings(settings);
+    if (persist) persist_current_settings();
+    if (g_settingsWindow) g_settingsWindow->set_settings(settings);
+}
+
+void publish_context_view(HWND notify_window, const visual::core::ScreenRect& viewport, double zoom) noexcept {
+    {
+        std::scoped_lock lock(g_contextViewMutex);
+        g_pendingContextView.viewport = viewport;
+        g_pendingContextView.zoom = zoom;
+    }
+    bool expected = false;
+    if (g_contextViewMessagePending.compare_exchange_strong(expected, true, std::memory_order_relaxed)) {
+        PostMessageW(notify_window, kContextViewChangedMessage, 0, 0);
+    }
 }
 
 class Telemetry {
@@ -162,7 +262,7 @@ public:
         stream_.flush();
     }
 
-    void frame(std::uint64_t sequence, LARGE_INTEGER qpc, int zoom, bool tracking, bool poiPresent,
+    void frame(std::uint64_t sequence, LARGE_INTEGER qpc, double zoom, bool tracking, bool poiPresent,
                visual::core::PoiSource source, bool locatorVisible, visual::core::ViewportAction action,
                const visual::core::ScreenRect& viewport, HRESULT presentHr,
                double pointerAgeMs, double uiaSnapshotAgeMs, bool uiaCaretPresent, bool uiaFocusPresent,
@@ -242,7 +342,8 @@ public:
 
     HRESULT render_cached(const RECT& sourceMonitorRect,
                           const visual::core::ScreenRect& viewportRect,
-                          const visual::core::LocatorTarget& locator) {
+                          const visual::core::LocatorTarget& locator,
+                          visual::core::VisualMode visualMode) {
         std::scoped_lock lock(d3dMutex_);
         ID3D11Texture2D* source = cachedSource_.get();
         if (!source) return S_FALSE;
@@ -279,7 +380,9 @@ public:
              static_cast<float>(locator.right), static_cast<float>(locator.bottom)},
             {static_cast<float>(width_), static_cast<float>(height_)},
             locator.visible ? 1.0f : 0.0f,
-            static_cast<float>(locator.kind)
+            static_cast<float>(locator.kind),
+            static_cast<float>(visualMode),
+            {0.0f, 0.0f, 0.0f}
         };
         D3D11_MAPPED_SUBRESOURCE mapped{};
         hr = context_->Map(cropBuffer_.get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -346,6 +449,8 @@ cbuffer RenderConstants : register(b0) {
     float2 outputSize;
     float locatorVisible;
     float locatorKind;
+    float visualMode;
+    float3 padding;
 };
 struct VSInput { float2 pos : POSITION; float2 uv : TEXCOORD0; };
 struct VSOutput { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -354,6 +459,14 @@ Texture2D SourceTexture : register(t0);
 SamplerState LinearSampler : register(s0);
 float4 PSMain(VSOutput input) : SV_TARGET {
     float4 base = SourceTexture.Sample(LinearSampler, uvOffset + input.uv * uvScale);
+    if (visualMode > 0.5 && visualMode < 1.5) {
+        base.rgb = saturate((base.rgb - 0.5) * 1.65 + 0.5);
+    } else if (visualMode > 1.5 && visualMode < 2.5) {
+        base.rgb = 1.0 - base.rgb;
+    } else if (visualMode > 2.5) {
+        float gray = dot(base.rgb, float3(0.2126, 0.7152, 0.0722));
+        base.rgb = float3(gray, gray, gray);
+    }
     if (locatorVisible < 0.5) return base;
 
     float2 p = input.uv * outputSize;
@@ -576,17 +689,24 @@ private:
                     if (intersectsSource) candidates.push_back(candidate);
                 }
 
-                const int zoom = g_zoom.load(std::memory_order_relaxed);
-                const bool tracking = g_trackingEnabled.load(std::memory_order_relaxed);
+                const auto frameSettings = runtime_settings_snapshot();
+                candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const visual::core::PoiCandidate& candidate) {
+                    return !visual::core::should_follow(candidate.kind, frameSettings);
+                }), candidates.end());
+
+                const double zoom = frameSettings.zoom;
+                const bool tracking = frameSettings.tracking_enabled;
                 const auto view = viewController_.update(
                     sourceRect, zoom, tracking, candidates, nowQpc,
                     static_cast<std::uint64_t>(qpcFreq_.QuadPart));
                 const auto selectedSource = view.selected_poi ? view.selected_poi->source : visual::core::PoiSource::Pointer;
-                const auto locator = view.selected_poi
+                const bool showLocator = view.selected_poi && visual::core::should_show_locator(view.selected_poi->kind, frameSettings);
+                const auto locator = showLocator
                     ? visual::core::make_locator_target(*view.selected_poi, view.viewport)
                     : visual::core::LocatorTarget{};
+                publish_context_view(notifyWindow_, view.viewport, zoom);
 
-                const HRESULT presentHr = renderer_.render_cached(sourceMonitor_.rect, view.viewport, locator);
+                const HRESULT presentHr = renderer_.render_cached(sourceMonitor_.rect, view.viewport, locator, frameSettings.visual_mode);
                 if (presentHr != S_FALSE) {
                     if (SUCCEEDED(presentHr)) {
                         bool expected = false;
@@ -649,39 +769,72 @@ private:
 
 constexpr int kHotkeyZoom1 = 101;
 constexpr int kHotkeyZoom2 = 102;
+constexpr int kHotkeyZoom3 = 103;
 constexpr int kHotkeyZoom4 = 104;
 constexpr int kHotkeyTracking = 110;
+constexpr int kHotkeySettings = 111;
 constexpr int kHotkeyNormalReturn = 120;
 constexpr int kHotkeyExit = 199;
 
-void set_zoom(int zoom) noexcept {
-    if (zoom != 1 && zoom != 2 && zoom != 4) return;
-    if (zoom > 1) g_previousMagnifiedZoom.store(zoom, std::memory_order_relaxed);
+void refresh_settings_window() noexcept {
+    if (!g_settingsWindow) return;
+    try {
+        visual::core::VisualSettings copy{};
+        {
+            std::scoped_lock lock(g_settingsMutex);
+            copy = g_settings;
+        }
+        g_settingsWindow->set_settings(copy);
+    } catch (...) {}
+}
+
+void set_zoom(double zoom) noexcept {
+    zoom = visual::core::sanitize_zoom(zoom, g_zoom.load(std::memory_order_relaxed));
+    if (zoom > 1.0) g_previousMagnifiedZoom.store(zoom, std::memory_order_relaxed);
     g_zoom.store(zoom, std::memory_order_relaxed);
+    {
+        std::scoped_lock lock(g_settingsMutex);
+        g_settings.zoom = zoom;
+    }
+    persist_current_settings();
+    refresh_settings_window();
 }
 
 void toggle_normal_return() noexcept {
-    const int current = g_zoom.load(std::memory_order_relaxed);
-    if (current == 1) {
-        int restore = g_previousMagnifiedZoom.load(std::memory_order_relaxed);
-        if (restore != 2 && restore != 4) restore = 2;
+    const double current = g_zoom.load(std::memory_order_relaxed);
+    if (visual::core::near_zoom(current, 1.0)) {
+        double restore = g_previousMagnifiedZoom.load(std::memory_order_relaxed);
+        if (!visual::core::supported_zoom(restore) || restore <= 1.0) restore = 2.0;
         g_zoom.store(restore, std::memory_order_relaxed);
     } else {
         g_previousMagnifiedZoom.store(current, std::memory_order_relaxed);
-        g_zoom.store(1, std::memory_order_relaxed);
+        g_zoom.store(1.0, std::memory_order_relaxed);
     }
 }
 
 void toggle_tracking() noexcept {
-    g_trackingEnabled.store(!g_trackingEnabled.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    const bool enabled = !g_trackingEnabled.load(std::memory_order_relaxed);
+    g_trackingEnabled.store(enabled, std::memory_order_relaxed);
+    {
+        std::scoped_lock lock(g_settingsMutex);
+        g_settings.tracking_enabled = enabled;
+    }
+    persist_current_settings();
+    refresh_settings_window();
+}
+
+void show_settings() noexcept {
+    if (g_settingsWindow) g_settingsWindow->show();
 }
 
 void register_hotkeys(HWND hwnd) noexcept {
     constexpr UINT modifiers = MOD_CONTROL | MOD_ALT | MOD_NOREPEAT;
     RegisterHotKey(hwnd, kHotkeyZoom1, modifiers, '1');
     RegisterHotKey(hwnd, kHotkeyZoom2, modifiers, '2');
+    RegisterHotKey(hwnd, kHotkeyZoom3, modifiers, '3');
     RegisterHotKey(hwnd, kHotkeyZoom4, modifiers, '4');
     RegisterHotKey(hwnd, kHotkeyTracking, modifiers, 'T');
+    RegisterHotKey(hwnd, kHotkeySettings, modifiers, 'S');
     RegisterHotKey(hwnd, kHotkeyNormalReturn, modifiers, '0');
     RegisterHotKey(hwnd, kHotkeyExit, modifiers, 'Q');
 }
@@ -689,10 +842,35 @@ void register_hotkeys(HWND hwnd) noexcept {
 void unregister_hotkeys(HWND hwnd) noexcept {
     UnregisterHotKey(hwnd, kHotkeyZoom1);
     UnregisterHotKey(hwnd, kHotkeyZoom2);
+    UnregisterHotKey(hwnd, kHotkeyZoom3);
     UnregisterHotKey(hwnd, kHotkeyZoom4);
     UnregisterHotKey(hwnd, kHotkeyTracking);
+    UnregisterHotKey(hwnd, kHotkeySettings);
     UnregisterHotKey(hwnd, kHotkeyNormalReturn);
     UnregisterHotKey(hwnd, kHotkeyExit);
+}
+
+void show_detail_context_menu(HWND hwnd, LPARAM l_param) noexcept {
+    POINT point{GET_X_LPARAM(l_param), GET_Y_LPARAM(l_param)};
+    if (point.x == -1 && point.y == -1) {
+        RECT rect{};
+        GetWindowRect(hwnd, &rect);
+        point = {rect.left + 40, rect.top + 40};
+    }
+    HMENU menu = CreatePopupMenu();
+    if (!menu) return;
+    AppendMenuW(menu, MF_STRING, 1, L"Visual Settings...\tCtrl+Alt+S");
+    AppendMenuW(menu, MF_STRING, 2, L"Normal view / Return\tCtrl+Alt+0");
+    AppendMenuW(menu, MF_STRING | (g_trackingEnabled.load(std::memory_order_relaxed) ? MF_CHECKED : 0), 3, L"Follow activity\tCtrl+Alt+T");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu, MF_STRING, 4, L"Exit Visual\tCtrl+Alt+Q");
+    SetForegroundWindow(hwnd);
+    const UINT command = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON, point.x, point.y, 0, hwnd, nullptr);
+    DestroyMenu(menu);
+    if (command == 1) show_settings();
+    else if (command == 2) toggle_normal_return();
+    else if (command == 3) toggle_tracking();
+    else if (command == 4) DestroyWindow(hwnd);
 }
 
 LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -701,18 +879,39 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
         if (wParam == VK_ESCAPE) { DestroyWindow(hwnd); return 0; }
         if (wParam == '1') { set_zoom(1); return 0; }
         if (wParam == '2') { set_zoom(2); return 0; }
+        if (wParam == '3') { set_zoom(3); return 0; }
         if (wParam == '4') { set_zoom(4); return 0; }
         if (wParam == 'T') { toggle_tracking(); return 0; }
+        if (wParam == 'S') { show_settings(); return 0; }
         if (wParam == '0') { toggle_normal_return(); return 0; }
         break;
     case WM_HOTKEY:
         if (wParam == kHotkeyZoom1) { set_zoom(1); return 0; }
         if (wParam == kHotkeyZoom2) { set_zoom(2); return 0; }
+        if (wParam == kHotkeyZoom3) { set_zoom(3); return 0; }
         if (wParam == kHotkeyZoom4) { set_zoom(4); return 0; }
         if (wParam == kHotkeyTracking) { toggle_tracking(); return 0; }
+        if (wParam == kHotkeySettings) { show_settings(); return 0; }
         if (wParam == kHotkeyNormalReturn) { toggle_normal_return(); return 0; }
         if (wParam == kHotkeyExit) { DestroyWindow(hwnd); return 0; }
         break;
+    case kContextViewChangedMessage: {
+        PendingContextView pending{};
+        {
+            std::scoped_lock lock(g_contextViewMutex);
+            pending = g_pendingContextView;
+        }
+        g_contextViewMessagePending.store(false, std::memory_order_relaxed);
+        if (g_contextOverlay) {
+            g_contextOverlay->update(pending.viewport, pending.zoom,
+                                     g_showContextIndicator.load(std::memory_order_relaxed),
+                                     g_shadeContextIndicator.load(std::memory_order_relaxed));
+        }
+        return 0;
+    }
+    case WM_CONTEXTMENU:
+        show_detail_context_menu(hwnd, lParam);
+        return 0;
     case kCaptureErrorMessage:
         g_shutdownReason.store(static_cast<int>(ShutdownReason::CaptureFailure), std::memory_order_relaxed);
         if (!g_healthCheckMode.load(std::memory_order_relaxed)) {
@@ -767,7 +966,7 @@ WindowPlacement create_detail_window(HINSTANCE instance, const MonitorRecord& de
         exStyle |= WS_EX_TOPMOST;
     }
 
-    HWND hwnd = CreateWindowExW(exStyle, kWindowClass, L"Visual Ã¢â‚¬â€ Detail", style, x, y, width, height,
+    HWND hwnd = CreateWindowExW(exStyle, kWindowClass, L"Visual - Detail", style, x, y, width, height,
                                 nullptr, nullptr, instance, nullptr);
     if (!hwnd) winrt::throw_last_error();
     register_hotkeys(hwnd);
@@ -784,17 +983,44 @@ WindowPlacement create_detail_window(HINSTANCE instance, const MonitorRecord& de
     return result;
 }
 
-int choose_source(const std::vector<MonitorRecord>& monitors, int requested) {
+int find_monitor_by_device(const std::vector<MonitorRecord>& monitors, const std::wstring& device_name) {
+    if (device_name.empty()) return -1;
+    for (std::size_t i = 0; i < monitors.size(); ++i) {
+        if (_wcsicmp(monitors[i].deviceName.c_str(), device_name.c_str()) == 0) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+int choose_source(const std::vector<MonitorRecord>& monitors, int requested, const std::wstring& persisted_device) {
     if (requested >= 0) return requested;
-    for (size_t i = 0; i < monitors.size(); ++i) if (monitors[i].primary) return static_cast<int>(i);
+    const int persisted = find_monitor_by_device(monitors, persisted_device);
+    if (persisted >= 0) return persisted;
+    for (std::size_t i = 0; i < monitors.size(); ++i) if (monitors[i].primary) return static_cast<int>(i);
     return 0;
 }
 
-int choose_destination(const std::vector<MonitorRecord>& monitors, int source, int requested, bool singleMonitor) {
-    if (singleMonitor) return source;
+int choose_destination(const std::vector<MonitorRecord>& monitors, int source, int requested, bool single_monitor,
+                       const std::wstring& persisted_device) {
+    if (single_monitor) return source;
     if (requested >= 0) return requested;
-    for (size_t i = 0; i < monitors.size(); ++i) if (static_cast<int>(i) != source) return static_cast<int>(i);
+    const int persisted = find_monitor_by_device(monitors, persisted_device);
+    if (persisted >= 0 && persisted != source) return persisted;
+    for (std::size_t i = 0; i < monitors.size(); ++i) if (static_cast<int>(i) != source) return static_cast<int>(i);
     return -1;
+}
+
+std::vector<visual::ui::MonitorOption> make_monitor_options(const std::vector<MonitorRecord>& monitors) {
+    std::vector<visual::ui::MonitorOption> result;
+    result.reserve(monitors.size());
+    for (std::size_t i = 0; i < monitors.size(); ++i) {
+        const auto& monitor = monitors[i];
+        std::wstringstream label;
+        label << L"Screen " << (i + 1) << L" - "
+              << monitor.mode.dmPelsWidth << L" x " << monitor.mode.dmPelsHeight;
+        if (monitor.primary) label << L" (Primary)";
+        result.push_back({monitor.deviceName, label.str()});
+    }
+    return result;
 }
 
 } // namespace
@@ -805,8 +1031,18 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         winrt::init_apartment(winrt::apartment_type::multi_threaded);
         const auto options = parse_options();
         g_healthCheckMode.store(options.healthCheck, std::memory_order_relaxed);
-        g_zoom.store(options.zoom, std::memory_order_relaxed);
-        if (options.zoom > 1) g_previousMagnifiedZoom.store(options.zoom, std::memory_order_relaxed);
+
+        g_settingsPath = visual::settings::default_settings_path();
+        auto persistedSettings = visual::settings::load_settings(g_settingsPath);
+        {
+            std::scoped_lock lock(g_settingsMutex);
+            g_settings = persistedSettings;
+        }
+        apply_runtime_settings(persistedSettings);
+        if (options.zoomSpecified) {
+            g_zoom.store(options.zoom, std::memory_order_relaxed);
+            if (options.zoom > 1.0) g_previousMagnifiedZoom.store(options.zoom, std::memory_order_relaxed);
+        }
 
         const auto monitors = enumerate_monitors();
         if (monitors.empty()) {
@@ -815,22 +1051,95 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         }
 
         const bool singleMonitor = options.forceSingleMonitor || monitors.size() == 1;
-        const int sourceIndex = choose_source(monitors, options.sourceIndex);
-        const int destIndex = choose_destination(monitors, sourceIndex, options.destIndex, singleMonitor);
+        const int sourceIndex = choose_source(monitors, options.sourceIndex, persistedSettings.context_monitor_device);
+        const int destIndex = choose_destination(monitors, sourceIndex, options.destIndex, singleMonitor,
+                                                 persistedSettings.detail_monitor_device);
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(monitors.size())
             || destIndex < 0 || destIndex >= static_cast<int>(monitors.size())
             || (!singleMonitor && sourceIndex == destIndex)) {
-            if (!options.healthCheck) MessageBoxW(nullptr, L"Invalid source/destination monitor selection.", L"Visual", MB_OK | MB_ICONERROR);
+            if (!options.healthCheck) MessageBoxW(nullptr, L"Invalid Context/Detail screen selection.", L"Visual", MB_OK | MB_ICONERROR);
             return 3;
+        }
+
+        // Persist the resolved Context and Detail roles only when they came from normal settings/default
+        // selection. Explicit command-line monitor indices remain temporary diagnostic overrides.
+        bool roleSettingsChanged = false;
+        if (!singleMonitor && options.sourceIndex < 0) {
+            if (persistedSettings.context_monitor_device != monitors[static_cast<std::size_t>(sourceIndex)].deviceName) {
+                persistedSettings.context_monitor_device = monitors[static_cast<std::size_t>(sourceIndex)].deviceName;
+                roleSettingsChanged = true;
+            }
+        }
+        if (!singleMonitor && options.destIndex < 0) {
+            if (persistedSettings.detail_monitor_device != monitors[static_cast<std::size_t>(destIndex)].deviceName) {
+                persistedSettings.detail_monitor_device = monitors[static_cast<std::size_t>(destIndex)].deviceName;
+                roleSettingsChanged = true;
+            }
+        }
+        if (!persistedSettings.reference_monitor_device.empty()) {
+            const int referenceIndex = find_monitor_by_device(monitors, persistedSettings.reference_monitor_device);
+            if (referenceIndex < 0 || referenceIndex == sourceIndex || referenceIndex == destIndex) {
+                persistedSettings.reference_monitor_device.clear();
+                roleSettingsChanged = true;
+            }
+        }
+        if (singleMonitor) {
+            if (!persistedSettings.context_monitor_device.empty() || !persistedSettings.detail_monitor_device.empty()
+                || !persistedSettings.reference_monitor_device.empty()) {
+                persistedSettings.context_monitor_device.clear();
+                persistedSettings.detail_monitor_device.clear();
+                persistedSettings.reference_monitor_device.clear();
+                roleSettingsChanged = true;
+            }
+        }
+        if (roleSettingsChanged) {
+            {
+                std::scoped_lock lock(g_settingsMutex);
+                g_settings.context_monitor_device = persistedSettings.context_monitor_device;
+                g_settings.detail_monitor_device = persistedSettings.detail_monitor_device;
+                g_settings.reference_monitor_device = persistedSettings.reference_monitor_device;
+            }
+            if (!options.healthCheck) persist_current_settings();
         }
 
         Telemetry telemetry(options.logPath);
         telemetry.event("telemetry_started");
-        auto window = create_detail_window(instance, monitors[destIndex], singleMonitor);
+        auto window = create_detail_window(instance, monitors[static_cast<std::size_t>(destIndex)], singleMonitor);
         Renderer renderer;
         renderer.initialize(window.hwnd, window.width, window.height);
 
-        CaptureRunner capture(renderer, telemetry, monitors[sourceIndex], window.hwnd);
+        visual::ui::ContextOverlay contextOverlay;
+        if (!options.healthCheck && !singleMonitor) {
+            if (contextOverlay.create(instance, monitors[static_cast<std::size_t>(sourceIndex)].rect)) {
+                g_contextOverlay = &contextOverlay;
+                telemetry.event("context_indicator_ready");
+            } else {
+                telemetry.event("context_indicator_unavailable");
+            }
+        }
+
+        visual::ui::SettingsWindow settingsWindow;
+        if (!options.healthCheck) {
+            visual::core::VisualSettings uiSettings{};
+            {
+                std::scoped_lock lock(g_settingsMutex);
+                uiSettings = g_settings;
+            }
+            const auto monitorOptions = make_monitor_options(monitors);
+            if (settingsWindow.create(instance, window.hwnd, monitors[static_cast<std::size_t>(sourceIndex)].rect,
+                                      monitorOptions, uiSettings,
+                                      [&](const visual::core::VisualSettings& next, bool displayRolesChanged) {
+                                          adopt_settings(next, true);
+                                          telemetry.event(displayRolesChanged ? "settings_saved_display_restart_required" : "settings_applied");
+                                      })) {
+                g_settingsWindow = &settingsWindow;
+                telemetry.event("settings_ui_ready");
+            } else {
+                telemetry.event("settings_ui_unavailable");
+            }
+        }
+
+        CaptureRunner capture(renderer, telemetry, monitors[static_cast<std::size_t>(sourceIndex)], window.hwnd);
         capture.start();
         if (options.healthCheck) {
             const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(options.healthTimeoutMs);
@@ -865,10 +1174,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
 
         MSG msg{};
         while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
+            if (settingsWindow.hwnd() && IsDialogMessageW(settingsWindow.hwnd(), &msg)) continue;
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
         capture.stop();
+        g_settingsWindow = nullptr;
+        settingsWindow.destroy();
+        g_contextOverlay = nullptr;
+        contextOverlay.destroy();
+
         const auto shutdown = static_cast<ShutdownReason>(g_shutdownReason.load(std::memory_order_relaxed));
         switch (shutdown) {
         case ShutdownReason::CaptureFailure:

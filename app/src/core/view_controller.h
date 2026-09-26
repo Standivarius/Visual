@@ -21,14 +21,14 @@ class ViewController {
 public:
     [[nodiscard]] ViewUpdate update(
         const ScreenRect& source,
-        int zoom,
+        double zoom,
         bool tracking_enabled,
         const std::vector<PoiCandidate>& candidates,
         std::uint64_t now_qpc,
         std::uint64_t qpc_frequency) noexcept {
 
         ViewUpdate result{};
-        if (!source.valid() || zoom <= 0) return result;
+        if (!source.valid() || !std::isfinite(zoom) || zoom <= 0.0) return result;
 
         const auto selected = select_best_poi(candidates, now_qpc, qpc_frequency, poi_policy_);
         result.selected_poi = selected;
@@ -36,7 +36,7 @@ public:
         const double target_width = source.width() / static_cast<double>(zoom);
         const double target_height = source.height() / static_cast<double>(zoom);
 
-        const bool entering_normal = viewport_.valid() && current_zoom_ > 1 && zoom == 1;
+        const bool entering_normal = viewport_.valid() && current_zoom_ > 1.0 && std::abs(zoom - 1.0) <= 0.001;
         if (entering_normal) {
             saved_magnified_viewport_ = viewport_;
             saved_magnified_zoom_ = current_zoom_;
@@ -46,12 +46,12 @@ public:
         const bool saved_size_matches = have_saved_magnified_view_
             && std::abs(saved_magnified_viewport_.width() - target_width) <= 0.5
             && std::abs(saved_magnified_viewport_.height() - target_height) <= 0.5;
-        const bool restoring_saved = current_zoom_ == 1
-            && zoom == saved_magnified_zoom_
+        const bool restoring_saved = std::abs(current_zoom_ - 1.0) <= 0.001
+            && std::abs(zoom - saved_magnified_zoom_) <= 0.001
             && saved_size_matches;
 
         const bool size_changed = !viewport_.valid()
-            || current_zoom_ != zoom
+            || std::abs(current_zoom_ - zoom) > 0.001
             || std::abs(viewport_.width() - target_width) > 0.5
             || std::abs(viewport_.height() - target_height) > 0.5;
 
@@ -74,10 +74,10 @@ public:
 
             double center_x = source.left + source.width() * 0.5;
             double center_y = source.top + source.height() * 0.5;
-            if (viewport_.valid() && !tracking_enabled && zoom > 1) {
+            if (viewport_.valid() && !tracking_enabled && zoom > 1.0) {
                 center_x = (viewport_.left + viewport_.right) * 0.5;
                 center_y = (viewport_.top + viewport_.bottom) * 0.5;
-            } else if (selected && zoom > 1) {
+            } else if (selected && zoom > 1.0) {
                 center_x = (selected->screen_rect.left + selected->screen_rect.right) * 0.5;
                 center_y = (selected->screen_rect.top + selected->screen_rect.bottom) * 0.5;
             }
@@ -97,7 +97,7 @@ public:
 
         // At 1x the full source is already visible. Keep it spatially stable and save movement policy
         // for the magnified state that will be restored later.
-        if (zoom == 1) {
+        if (std::abs(zoom - 1.0) <= 0.001) {
             result.viewport = viewport_;
             result.action = ViewportAction::Hold;
             return result;
@@ -122,10 +122,10 @@ public:
     [[nodiscard]] const ScreenRect& viewport() const noexcept { return viewport_; }
 
 private:
-    int current_zoom_{};
+    double current_zoom_{};
     ScreenRect viewport_{};
     bool have_saved_magnified_view_{};
-    int saved_magnified_zoom_{};
+    double saved_magnified_zoom_{};
     ScreenRect saved_magnified_viewport_{};
     ViewportConfig viewport_config_{};
     PoiSelectionPolicy poi_policy_{};

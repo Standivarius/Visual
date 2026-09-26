@@ -1,17 +1,17 @@
-# Visual - current two-screen alpha
+# Visual - low-vision workspace alpha
 
 This folder contains the integrated Visual Windows application runtime used for the Doxa low-vision workstation project.
 
 ## Current purpose
 
-Visual is currently a functional two-screen engineering alpha:
+Visual is currently a functional low-vision workspace alpha:
 
-- the Windows primary display is the source/work surface;
-- a second physical display becomes the magnified Detail surface;
+- a Context display remains the source/work surface and shows the current Detail View region;
+- a Detail display shows the magnified working view;
 - Detail follows deliberate pointer movement, text caret or keyboard focus;
 - the viewport uses comfort margins rather than constant recentering;
-- the selected target is shown with a high-contrast locator;
-- Detail is non-activating so the source application keeps keyboard focus.
+- pointer, caret and focus tracking/markers can be controlled independently;
+- Detail is non-activating so the source application keeps keyboard focus; settings and display roles persist across launches.
 
 It is an experimental magnification/productivity platform, not a finished general-purpose magnifier replacement.
 
@@ -27,9 +27,9 @@ Release outputs:
 - `app\build\Release\visual_diagnostics.exe`
 - `app\build\Release\velopack_libc.dll`
 
-The canonical default version is `0.1.0-alpha.3` in `app\version.cmake`. A build can override it with `-Version <semver>`.
+The canonical default version is `0.1.0-alpha.6` in `app\version.cmake`. A build can override it with `-Version <semver>`.
 
-The native build acquires the pinned Velopack 1.2.0 C/C++ SDK into the ignored `app\third_party\velopack\` cache, builds Visual, and runs the five CTest tests. Ordinary native builds do not require a .NET SDK.
+The native build acquires the pinned Velopack 1.2.0 C/C++ SDK into the ignored `app\third_party\velopack\` cache, builds Visual, and runs seven CTest tests. Ordinary native builds do not require a .NET SDK.
 
 ## Runtime architecture
 
@@ -53,28 +53,50 @@ WGC frame arrival is deliberately not the interaction clock. Cursor capture is d
 
 With two or more displays:
 
-- source defaults to the Windows primary monitor;
-- destination defaults to the first different active monitor;
-- Detail uses the destination monitor full-screen.
+- Context defaults to the Windows primary monitor;
+- Detail defaults to the first different active monitor;
+- Context and Detail roles persist in `%LOCALAPPDATA%\Standivarius\Visual\settings.ini`;
+- an optional Reference role can be assigned to another display and remains available for normal Windows content;
+- screen-role changes are saved and take effect on the next Visual start;
+- Detail uses the assigned destination monitor full-screen.
 
 Engineering command-line options include:
 
 - `--source N`
 - `--dest N`
-- `--zoom 1|2|4`
+- `--zoom 1|1.5|2|3|4`
 - `--log PATH`
 - `--single-monitor`
 
-Monitor index is an engineering selection mechanism, not the final Doxa display-role model.
+Command-line monitor indices remain engineering overrides. Normal runs use the persisted screen roles.
 
 ## Global alpha hotkeys
 
 - `Ctrl+Alt+1` - 1x
 - `Ctrl+Alt+2` - 2x
+- `Ctrl+Alt+3` - 3x
 - `Ctrl+Alt+4` - 4x
 - `Ctrl+Alt+0` - temporary normal view / exact return
-- `Ctrl+Alt+T` - tracking on/off
+- `Ctrl+Alt+T` - follow activity on/off
+- `Ctrl+Alt+S` - open Visual Settings
 - `Ctrl+Alt+Q` - exit Visual
+
+The settings UI also provides 1.5x magnification. Right-click the Detail window for the compact Visual menu.
+
+## Visual Settings and Context view
+
+`Visual Settings` is a native keyboard-accessible Win32 settings window. It persists under `%LOCALAPPDATA%\Standivarius\Visual\settings.ini` and exposes a deliberately small user-facing set rather than engineering timing parameters:
+
+- magnification: 1x, 1.5x, 2x, 3x or 4x;
+- master follow-activity plus independent pointer, text-caret and keyboard-focus following;
+- independent high-visibility pointer, caret and focus markers;
+- a Context-screen **Detail View** rectangle showing the exact source region currently enlarged on Detail, with optional translucent shading;
+- Normal, High contrast, Inverted colours and Grayscale appearance modes on Detail;
+- persisted Context, Detail and optional Reference screen roles.
+
+The Detail View indicator is a separate layered window marked `WDA_EXCLUDEFROMCAPTURE`, so it stays visible on Context without being recursively captured into Detail. If Windows cannot apply capture exclusion, Visual does not show the indicator.
+
+Tracking, marker, magnification, appearance and Detail View settings apply live. Physical Context/Detail/Reference role changes are restart-bound by design so the active Windows Graphics Capture session is not rebuilt from the settings dialog.
 
 ## Tracking and viewport evidence
 
@@ -173,7 +195,7 @@ WGC size changes recreate the frame pool; capture-item closure and display-topol
 - viewport margins and locator appearance need low-vision usability tuning;
 - source-to-Detail pointer-boundary UX policy needs a product decision;
 - trusted code signing is not configured;
-- no polished launcher/settings/onboarding/update UI exists;
-- user-facing update prompts/settings/background policy are still not implemented;
-- persistent Doxa monitor roles/workspace recall are not implemented;
+- a basic accessible Visual Settings UI now exists; installer/onboarding/update-prompt UI remains intentionally separate and minimal;
+- user-facing update prompts/background update policy are still not implemented;
+- Context, Detail and optional Reference roles persist by Windows display device name; Doxa-specific hardware identity and validated user presets still require the real Doxa and user research;
 - broader Doxa multi-display validation remains future work.

@@ -117,6 +117,24 @@ static void test_view_controller_zoom_anchors_selected_poi(std::vector<Failure>&
     require(std::abs(center_x - 1002.0) < 1.0, name, "initial zoom should preserve selected POI near viewport center", failures);
 }
 
+static void test_fractional_and_three_x_zoom_geometry(std::vector<Failure>& failures) {
+    const std::string name = "fractional_and_three_x_zoom_geometry";
+    constexpr std::uint64_t freq = 1000;
+    const ScreenRect source{0, 0, 1920, 1080};
+    const auto target = make_candidate(PoiKind::Caret, PoiSource::Win32Caret, PoiConfidence::High,
+                                       {960, 540, 964, 560}, 1000);
+
+    ViewController one_and_half;
+    const auto fractional = one_and_half.update(source, 1.5, true, {target}, 1010, freq);
+    require(near(fractional.viewport.width(), 1280.0), name, "1.5x viewport width should be 1280", failures);
+    require(near(fractional.viewport.height(), 720.0), name, "1.5x viewport height should be 720", failures);
+
+    ViewController three_x;
+    const auto three = three_x.update(source, 3.0, true, {target}, 1010, freq);
+    require(near(three.viewport.width(), 640.0), name, "3x viewport width should be 640", failures);
+    require(near(three.viewport.height(), 360.0), name, "3x viewport height should be 360", failures);
+}
+
 static void test_view_controller_hold_then_pan_without_drift(std::vector<Failure>& failures) {
     const std::string name = "view_controller_hold_pan";
     ViewController controller;
@@ -157,6 +175,7 @@ int main() {
     test_safe_caret_holds(failures);
     test_stale_evidence_does_not_move(failures);
     test_view_controller_zoom_anchors_selected_poi(failures);
+    test_fractional_and_three_x_zoom_geometry(failures);
     test_view_controller_hold_then_pan_without_drift(failures);
     test_view_controller_tracking_disabled_holds(failures);
 
